@@ -1,45 +1,44 @@
-# Sanitized Defect Sample: Transient Keychain Access Error Fallback
+# Пример Обезличенного Отчета о Дефекте: Фолбэк при Ошибке Доступа к Keychain
 
-- **Defect ID**: `BUG-STR-001`
-- **Title**: Background tunnel launch fails to read password credential when device locked (Keychain errSecItemNotFound)
-- **Severity**: P1 - Critical
-- **Priority**: High
-- **Suspected Area**: Storage / ServerStore Keychain Access
-- **Build / Commit**: `v1.0-beta.4 (commit: e9a2c3f)`
-- **Test Environment**:
-  - Device: Physical iPhone 14 Pro
-  - OS Version: iOS 17.4
-  - Network Type: Wi-Fi (Home Router)
+- **ID Дефекта**: `BUG-STR-001`
+- **Заголовок**: Фоновый запуск сетевого туннеля не может прочитать пароль при заблокированном экране (Keychain errSecItemNotFound)
+- **Критичность**: P1 - Критический
+- **Приоритет**: Высокий
+- **Предполагаемая область**: Хранилище / Доступ ServerStore к Keychain
+- **Версия сборки / Коммит**: `v1.0-beta.4 (коммит: e9a2c3f)`
+- **Тестовое окружение**:
+  - Устройство: Физический iPhone 14 Pro
+  - Версия ОС: iOS 17.4
+  - Тип сети: Wi-Fi (Домашний роутер)
 
 ---
 
-## 1. Description
-When `NEPacketTunnelProvider` attempts to start in the background while the physical device screen is locked, `SecItemCopyMatching` fails with error code `-34018` or `errSecItemNotFound`. If the server credential relies solely on Keychain, the connection aborts.
+## 1. Описание
+Когда расширение `NEPacketTunnelProvider` пытается запуститься в фоновом режиме при заблокированном экране iPhone, системный вызов `SecItemCopyMatching` возвращает ошибку `-34018` или `errSecItemNotFound`. Если учетные данные хранятся только в Keychain, запуск VPN падает.
 
-## 2. Preconditions
-- Server configured with UUID credential in Keychain.
-- Device locked with passcode for > 10 minutes.
+## 2. Предусловия
+- Сервер настроен с паролем/UUID в связке ключей Keychain.
+- Экран устройства заблокирован паролем более 10 минут.
 
-## 3. Steps to Reproduce
-1. Schedule a background shortcut or automated connect action.
-2. Allow device to lock and enter standby mode.
-3. Trigger connection initiation.
+## 3. Шаги для воспроизведения
+1. Настроить запуск VPN через фоновую автоматизацию или Быстрые команды iOS.
+2. Заблокировать устройство и перевести в режим ожидания.
+3. Инициировать фоновое подключение.
 
-## 4. Expected Result
-The tunnel manager accesses the credential via the protected App Group fallback container (`group.com.via.vpn/credentials/`) and successfully starts the tunnel.
+## 4. Ожидаемый результат
+Менеджер туннеля обращается к защищенному резервному контейнеру App Group (`group.com.via.vpn/credentials/`) и успешно поднимает туннель без участия пользователя.
 
-## 5. Actual Result
-`KeychainManager.readString(key:)` threw `KeychainError.itemNotFound`. The connection failed with `credentialsExpired`.
+## 5. Фактический результат
+Вызов `KeychainManager.readString(key:)` выбросил исключение `KeychainError.itemNotFound`. Соединение сорвалось со статусом `credentialsExpired`.
 
-## 6. Reproducibility
-- [x] 100% (Deterministic when device locked)
+## 6. Воспроизводимость
+- [x] 100% (Стабильно воспроизводится на заблокированном экране)
 
-## 7. Sanitized Logs & Diagnostics
+## 7. Обезличенные логи и диагностика
 ```
 [2026-10-06T11:20:10Z] [Storage] [ERROR] Failed to read credential 'server_cred_REDACTED': itemNotFound
 [2026-10-06T11:20:10Z] [VPN] [ERROR] State Transition: preparing -> failed(credentialsExpired)
 ```
 
-## 8. Resolution / Mitigation
-Implemented Dual-Persist strategy in `ServerStore.swift`: writes redundant atomic copy of credential into App Group `credentials/` subdirectory with atomic file permissions.
-
+## 8. Решение и принятые меры
+В `ServerStore.swift` реализован паттерн Dual-Persist: выполняется атомарная запись копии ключа в подкаталог `credentials/` внутри общей App Group с атомарными правами доступа.

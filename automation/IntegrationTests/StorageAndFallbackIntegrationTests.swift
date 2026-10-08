@@ -30,7 +30,8 @@ struct StorageAndFallbackIntegrationTests {
 
     @Test("RuntimeSnapshotManager creates and reads atomic profile snapshot")
     func testRuntimeSnapshotAtomicCreation() async throws {
-        let manager = RuntimeSnapshotManager()
+        let isolatedStorage = AppGroupStorage(groupIdentifier: "test.isolated.\(UUID().uuidString)")
+        let manager = RuntimeSnapshotManager(storage: isolatedStorage)
         let server = TestFixtures.makeServer()
 
         let compiler = XrayConfigCompiler()
@@ -53,3 +54,4 @@ struct StorageAndFallbackIntegrationTests {
         #expect(netSettings.dnsServers.contains("1.1.1.1"))
     }
 }
+

@@ -1,29 +1,29 @@
-# Performance Benchmarking Methodology
+# Методология Замеров Производительности (Benchmarks)
 
-## 1. Objectives & Principles
+## 1. Цели и принципы
 
-The performance benchmarking suite measures resource utilization, memory boundaries, and connection establishment latencies across both the main iOS host application and the `NEPacketTunnelProvider` extension.
+Набор бенчмарков производительности предназначен для систематического контроля утилизации системных ресурсов, замера профиля оперативной памяти и времени инициализации сессии как для основного приложения iOS, так и для фонового сетевого расширения `NEPacketTunnelProvider`.
 
 > [!IMPORTANT]
-> **No Fictitious Benchmarks**: All metrics in this directory define rigorous methodologies and JSON schemas. Baseline numbers are recorded only when executed against real hardware. Unmeasured metrics are explicitly marked as `Baseline Pending`.
+> **Недопустимость сфабрикованных цифр**: Все показатели в этом разделе строго описывают методику измерений и формат схемы JSON. Базовые замеры фиксируются исключительно на физических устройствах в лаборатории. До проведения замеров поля помечаются как `Требуется замер базового уровня`.
 
 ---
 
-## 2. Core Metrics & Budgets
+## 2. Ключевые метрики и целевые бюджеты
 
-| Metric | Target Process | Engineering Target | Status | Tooling |
+| Метрика | Целевой процесс | Проектный порог | Статус | Инструмент |
 | :--- | :--- | :--- | :--- | :--- |
-| **Extension Memory Footprint (Idle)** | `PacketTunnel` | **< 15.0 MB** | Baseline Pending | Xcode Instruments / `vmmap` |
-| **Extension Memory Footprint (Active 50 Mbps)** | `PacketTunnel` | **< 15.0 MB** | Baseline Pending | Xcode Instruments / `vmmap` |
-| **Main App Memory Footprint (Idle)** | `ViaApp` | **< 60.0 MB** | Baseline Pending | Xcode Instruments |
-| **Connection Latency (Handshake RTT)** | Host to Proxy | **Min, Median, p95, Max** | Baseline Pending | Benchmark Harness |
-| **CPU Utilization (Idle Connected)** | Both Processes | **< 2%** | Baseline Pending | Xcode Instruments |
+| **Память расширения (Режим простоя)** | `PacketTunnel` | **< 15.0 МБ** | Требуется замер базового уровня | Xcode Instruments / `vmmap` |
+| **Память расширения (Активный трафик 50 Мбит/с)**| `PacketTunnel` | **< 15.0 МБ** | Требуется замер базового уровня | Xcode Instruments / `vmmap` |
+| **Память основного приложения (Простой)** | `ViaApp` | **< 60.0 МБ** | Требуется замер базового уровня | Xcode Instruments |
+| **Задержка подключения (Handshake RTT)** | Хост ➔ Прокси | **Мин, Медиана, p95, Макс** | Требуется замер базового уровня | Тестовый харнесс |
+| **Нагрузка на CPU (В подключенном состоянии)** | Оба процесса | **< 2%** | Требуется замер базового уровня | Xcode Instruments |
 
 ---
 
-## 3. Memory Measurement Schema (JSON)
+## 3. Схема сохранения результатов замера памяти (JSON)
 
-When benchmarks are executed on physical hardware, results must be logged in `benchmarks/results/` following this JSON schema:
+При выполнении замеров на реальном оборудовании результаты заносятся в `benchmarks/results/` в соответствии со следующей схемой:
 
 ```json
 {
@@ -56,12 +56,11 @@ When benchmarks are executed on physical hardware, results must be logged in `be
 
 ---
 
-## 4. Execution Script
+## 4. Скрипт локального замера
 
-To capture memory footprint during local testing on macOS:
+Для фиксации объема оперативной памяти процессов во время локального запуска на macOS:
 
 ```bash
-# Run safe memory benchmark logger
+# Запуск скрипта мониторинга RSS памяти
 ./benchmarks/run_memory_benchmark.sh
 ```
-

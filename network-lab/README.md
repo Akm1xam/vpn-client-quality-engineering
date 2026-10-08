@@ -1,46 +1,45 @@
-# Network Chaos Lab & Fault Injection
+# Лаборатория Сетевого Хаоса и Симуляции Сбоев (Network Chaos Lab)
 
-## 1. Overview
+## 1. Общие сведения
 
-The Network Chaos Lab defines reproducible physical and synthetic fault-injection scenarios to test the resilience of **Via** under degraded network conditions.
+Лаборатория сетевого хаоса описывает воспроизводимые физические и синтетические сценарии инжекции сетевых аномалий для проверки отказоустойчивости клиента **Via** в неблагоприятных и агрессивных сетевых условиях.
 
-The lab tests four primary failure modes:
-1. **Packet Loss**: 1%, 5%, 20%, 50%.
-2. **Artificial Latency**: 50ms, 150ms, 500ms, 1000ms.
-3. **Jitter & Out-of-Order Packets**: $\pm 20$ms, $\pm 100$ms.
-4. **Interface Flapping & Blackholing**: Instantaneous loss of default route.
+Лаборатория моделирует четыре ключевых класса сбоев:
+1. **Потеря пакетов (Packet Loss)**: 1%, 5%, 20%, 50%.
+2. **Искусственная задержка (Latency)**: 50 мс, 150 мс, 500 мс, 1000 мс.
+3. **Джиттер и нарушение порядка пакетов (Jitter & Out-of-order)**: $\pm 20$ мс, $\pm 100$ мс.
+4. **Флаппинг интерфейсов и блэкхолинг**: Мгновенный разрыв и восстановление основного сетевого маршрута.
 
 ---
 
-## 2. Lab Infrastructure Setup
+## 2. Стенд лабораторной инфраструктуры
 
 ```
-[ Developer Host / Router ]
+[ Хост разработчика / Управляемый шлюз ]
      │  (macOS pfctl / Linux netem / dummynet)
      ▼
-[ Managed Test Wi-Fi AP ]
+[ Тестовая Wi-Fi точка доступа ]
      │  (WPA3, Dual-Band 2.4/5GHz)
      ▼
-[ Physical iOS Device SUT ] ─── (Real Cellular 4G/5G)
+[ Физический iPhone SUT ] ─── (Реальная сеть 4G/5G)
      │
      ▼
-[ Uplink Gateway ] ─── [ Controlled Xray Test Outbounds ]
+[ Внешний роутер с портом зеркалирования ] ─── [ Тестовые узлы Xray-core ]
 ```
 
 ---
 
-## 3. Scenarios Catalog
+## 3. Каталог сценариев сбоев
 
-- `scenarios/packet-loss.md`: Resilience under 1% to 50% packet drop rates.
-- `scenarios/high-latency.md`: Behavioral validation across transoceanic latencies (500ms – 1000ms).
-- `scenarios/network-drop.md`: Sudden disconnection, sleep/wake, and airplane mode recovery.
-- `scenarios/dns-failure.md`: Simulating upstream DoH outages and resolver fallbacks.
-- `scenarios/reconnect-storm.md`: Handling rapid server restarts and connection floods.
+- `scenarios/packet-loss.md`: Поведение клиента при потерях от 1% до 50% пакетов.
+- `scenarios/high-latency.md`: Валидация работы при высоких трансокеанских задержках (500–1000 мс).
+- `scenarios/network-drop.md`: Внезапный обрыв связи, переход в авиарежим, экран блокировки и сон.
+- `scenarios/dns-failure.md`: Симуляция падения upstream DoH серверов и переключение на резервные.
+- `scenarios/reconnect-storm.md`: Поведение при лавинообразных перезапусках удаленного сервера.
 
 ---
 
-## 4. Safety Policy
+## 4. Политика безопасности
 
 > [!CAUTION]
-> Automated scripts in `network-lab/scripts/` **NEVER** apply persistent kernel packet filter (`pfctl`) rules without an automatic timeout rollback. If a script loses terminal connectivity, all firewall rules reset within 60 seconds.
-
+> Все проверочные скрипты в папке `network-lab/scripts/` **НИКОГДА** не применяют перманентных правил файрвола `pfctl` без таймера аварийного автоотката. При разрыве соединения с терминалом все внесенные сетевые ограничения автоматически сбрасываются в течение 60 секунд.

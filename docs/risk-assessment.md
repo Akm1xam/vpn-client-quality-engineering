@@ -1,55 +1,54 @@
-# Risk Assessment & Threat Modeling
+# Оценка Рисков и Модель Угроз (Risk Assessment)
 
-## 1. Methodology
+## 1. Методология
 
-Risks are quantified using the Risk Priority Number (RPN) model:
-$$\text{RPN} = \text{Probability} \times \text{Impact} \times \text{Detectability}$$
+Оценка рисков осуществляется по методике приоритетного числа риска (Risk Priority Number, RPN):
+$$\text{RPN} = \text{Вероятность (P)} \times \text{Влияние (I)} \times \text{Обнаруживаемость (D)}$$
 
-- **Probability (P)**: 1 (Very Rare) to 5 (Frequent)
-- **Impact (I)**: 1 (Negligible) to 5 (Critical Data Loss / Security Compromise)
-- **Detectability (D)**: 1 (Immediately visible in automated tests) to 5 (Silent failure in production)
-- **Severity Classification**:
-  - **Critical**: RPN $\ge 40$ or Impact = 5 (Immediate Release Blocker)
-  - **High**: $24 \le \text{RPN} < 40$
-  - **Medium**: $12 \le \text{RPN} < 24$
-  - **Low**: $\text{RPN} < 12$
+- **Вероятность (Probability, P)**: от 1 (Крайне редко) до 5 (Регулярно).
+- **Влияние (Impact, I)**: от 1 (Незначительное) до 5 (Критическая компрометация данных / сбой).
+- **Обнаруживаемость (Detectability, D)**: от 1 (Мгновенно видно в автотестах) до 5 (Скрытый дефект в продакшене).
+- **Классификация критичности**:
+  - **Критический**: $\text{RPN} \ge 40$ или $\text{Влияние} = 5$ (Немедленный блокер релиза).
+  - **Высокий**: $24 \le \text{RPN} < 40$.
+  - **Средний**: $12 \le \text{RPN} < 24$.
+  - **Низкий**: $\text{RPN} < 12$.
 
 ---
 
-## 2. Risk Matrix
+## 2. Матрица рисков
 
-| Risk ID | Domain | Scenario | P | I | D | RPN | Severity | Mitigation Strategy | Test Coverage | Release Blocker |
+| ID Риска | Область | Сценарий отказа | P | I | D | RPN | Критичность | Стратегия устранения | Покрытие тестами | Блокер релиза |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- | :--- | :---: |
-| **RISK-NET-001** | Connectivity | Tunnel reports `.connected`, but routing fails; traffic stalls or drops silently. | 3 | 5 | 4 | **60** | **Critical** | Implement active end-to-end ping & TCP probe upon connection establishment. | `NET-RES-001` | **YES** |
-| **RISK-NET-002** | DNS | DNS requests bypass tunnel during Wi-Fi to Cellular handoff, leaking queries to ISP. | 3 | 5 | 4 | **60** | **Critical** | Configure strict `NEDNSSettings.matchDomains = [""]` and block direct port 53 egress. | `SEC-LEAK-001` | **YES** |
-| **RISK-NET-003** | IPv6 | IPv6 traffic leaks outside tunnel on dual-stack networks when remote server is IPv4 only. | 4 | 5 | 3 | **60** | **Critical** | Route all IPv6 traffic to blackhole or drop interface unless remote server supports IPv6 outbound. | `NET-IP6-001` | **YES** |
-| **RISK-MEM-001** | Memory | PacketTunnelExtension exceeds 15 MB resident memory budget, causing iOS kernel to kill process (`EXC_RESOURCE`). | 4 | 5 | 3 | **60** | **Critical** | Strip runtime symbols, tune Go GC via CGO bridge, disable disk logging in extension. | `PERF-MEM-001` | **YES** |
-| **RISK-SEC-001** | Privacy | Sensitive credentials (passwords, UUIDs, Reality keys) printed to system logs. | 3 | 5 | 3 | **45** | **Critical** | Enforce `SanitizedLogger` regex masking and volatile in-memory circular ring buffer. | `SEC-LOG-001` | **YES** |
-| **RISK-CONC-001**| Concurrency | Race condition between rapid Connect and Disconnect commands corrupts VPN state. | 4 | 4 | 2 | **32** | **High** | Encapsulate lifecycle state transitions inside `ConnectionCoordinator` Swift Actor. | `STATE-REC-001` | **YES** |
-| **RISK-CFG-001** | Configuration | Malformed or unsupported Xray config item causes core crash during boot. | 3 | 4 | 2 | **24** | **High** | Pre-boot JSON schema validation in `XrayBridge.validate(jsonString:)` before calling start. | `FUN-CFG-002` | **YES** |
-| **RISK-LIF-001** | Lifecycle | Device goes to sleep; on wake, TCP connections are dead, but tunnel state remains stuck. | 4 | 4 | 2 | **32** | **High** | Implement keepalive heartbeats and reconnect on `NWPathMonitor` interface change. | `NET-HND-001` | **YES** |
-| **RISK-STR-001** | Storage | Keychain item access fails with error `-34018` during background extension execution. | 3 | 4 | 2 | **24** | **High** | Dual-persist credentials into isolated encrypted App Group credentials directory. | `INT-STR-001` | **YES** |
-| **RISK-HWID-001**| Subscription | Remnawave anti-sharing lock blocks client due to missing or unstable `x-hwid` header. | 3 | 4 | 2 | **24** | **High** | Persist deterministic UUID in `AppGroupStorage.persistentHWID()` across updates. | `FUN-SUB-001` | **YES** |
+| **RISK-NET-001** | Соединение | Туннель в статусе `.connected`, но пакеты не маршрутизируются; тихий дроп трафика. | 3 | 5 | 4 | **60** | **Критический** | Активный пинг и сквозная TCP-проверка при установке сессии. | `NET-RES-001` | **ДА** |
+| **RISK-NET-002** | DNS | DNS-запросы идут в обход туннеля при миграции с Wi-Fi на LTE, утекая провайдеру связи. | 3 | 5 | 4 | **60** | **Критический** | Установка `NEDNSSettings.matchDomains = [""]` и блокировка порта 53 на интерфейсе. | `SEC-LEAK-001` | **ДА** |
+| **RISK-NET-003** | IPv6 | Трафик IPv6 утекает мимо туннеля в Dual-Stack сетях, если прокси поддерживает только IPv4. | 4 | 5 | 3 | **60** | **Критический** | Маршрутизация IPv6 в drop/blackhole, если на удаленном сервере нет IPv6 outbounds. | `NET-IP6-001` | **ДА** |
+| **RISK-MEM-001** | Память | PacketTunnelExtension превышает бюджет 15 МБ, ядро iOS убивает процесс (`EXC_RESOURCE`). | 4 | 5 | 3 | **60** | **Критический** | Стриппинг символов, тюнинг Go GC через CGO-мост, отключение дискового логирования. | `PERF-MEM-001` | **ДА** |
+| **RISK-SEC-001** | Приватность | Чувствительные данные (пароли, UUID, Reality ключи) попадают в открытые системные логи. | 3 | 5 | 3 | **45** | **Критический** | Использование `SanitizedLogger` с regex-маскированием и кольцевым буфером в RAM. | `SEC-LOG-001` | **ДА** |
+| **RISK-CONC-001**| Многопоточность | Гонка между частыми нажатиями Подключить / Отключить повреждает состояние VPN. | 4 | 4 | 2 | **32** | **Высокий** | Инкапсуляция всех переходов жизненного цикла внутри Swift 6 актора `ConnectionCoordinator`. | `STATE-REC-001` | **ДА** |
+| **RISK-CFG-001** | Конфигурация | Невалидный или поврежденный JSON-конфиг приводит к аварийному падению Xray-core. | 3 | 4 | 2 | **24** | **Высокий** | Предварительная валидация в `XrayBridge.validate(jsonString:)` перед запуском ядра. | `FUN-CFG-002` | **ДА** |
+| **RISK-LIF-001** | Жизненный цикл | Устройство переходит в режим сна; после пробуждения сокеты мертвы, но туннель «висит». | 4 | 4 | 2 | **32** | **Высокий** | Контроль активности через keepalive heartbeats и обработка событий `NWPathMonitor`. | `NET-HND-001` | **ДА** |
+| **RISK-STR-001** | Хранилище | Ошибка Keychain `-34018` при попытке фонового старта расширения на заблокированном экране. | 3 | 4 | 2 | **24** | **Высокий** | Dual-Persist сохранение ключей в защищенную изолированную папку контейнера App Group. | `INT-STR-001` | **ДА** |
+| **RISK-HWID-001**| Подписки | Блокировка подписки панелью Remnawave/Marzban из-за отсутствия или смены заголовка `x-hwid`. | 3 | 4 | 2 | **24** | **Высокий** | Детерминированное сохранение UUID в `AppGroupStorage.persistentHWID()` между обновлениями. | `FUN-SUB-001` | **ДА** |
 
 ---
 
-## 3. Detailed Risk Analysis & Verification Plan
+## 3. Детальный разбор критических рисков
 
-### 3.1 RISK-MEM-001: Packet Tunnel Memory Limit Exceeded
-- **Description**: Apple does not provide a generous memory allowance for Network Extension targets. On constrained devices, extensions that consume >15 MB resident memory can be terminated without warning.
-- **Root Cause**: Go runtime (cgo), goroutine allocations, and heavy buffered read/writes.
-- **Verification**: 
-  - Automation in `benchmarks/run_memory_benchmark.sh`.
-  - Continuous measurement via Xcode Instruments (`Allocations` and `Memory Graph`).
+### 3.1 RISK-MEM-001: Превышение лимита памяти сетевого расширения
+- **Описание**: Операционная система iOS выделяет крайне ограниченный объем оперативной памяти под Network Extension. На устройствах с жестким бюджетом потребление свыше 15 МБ приводит к немедленному закрытию процесса системой.
+- **Причина**: Рантайм Go (cgo), фоновые горутины, аллокации буферов чтения/записи.
+- **Верификация**: 
+  - Автоматизированный скрипт `benchmarks/run_memory_benchmark.sh`.
+  - Профилирование через Xcode Instruments (`Allocations` и `Memory Graph`).
 
-### 3.2 RISK-NET-002: DNS Leakage During Interface Transition
-- **Description**: When a device switches from Wi-Fi to 5G, iOS reconfigures network interfaces. If `NEPacketTunnelNetworkSettings` does not immediately re-bind DNS routes, standard DNS queries may egress to cellular carrier DNS resolvers.
-- **Verification**: 
-  - Packet inspection using Wireshark on test Wi-Fi router.
-  - Automated DNS leak detection script `network-lab/scripts/check_dns_leak.sh`.
+### 3.2 RISK-NET-002: Утечка DNS при переключении интерфейсов
+- **Описание**: При переключении с Wi-Fi на 5G/LTE стек iOS перенастраивает интерфейсы. Если сетевые параметры не зафиксировали шлюз, запросы резолвера могут кратковременно уйти провайдеру связи.
+- **Верификация**: 
+  - Захват пакетов через Wireshark на роутере лаборатории.
+  - Автоматизированный проверочный скрипт `network-lab/scripts/check_dns_leak.sh`.
 
-### 3.3 RISK-CONC-001: State Machine Race Conditions
-- **Description**: Rapidly tapping the connect button or triggering a disconnect while an asynchronous connection handshake is pending can lead to mismatched states where the UI shows "Connected" but the tunnel is dead.
-- **Verification**:
-  - Swift Testing suite `StateTransitionInvariantsTests` running concurrent Task storms.
-
+### 3.3 RISK-CONC-001: Состояния гонки в автомате состояний
+- **Описание**: Быстрое многократное нажатие кнопки включения туннеля во время асинхронного рукопожатия может рассинхронизировать интерфейс: UI покажет статус «Подключено», когда туннель уже закрыт.
+- **Верификация**:
+  - Набор тестов `StateTransitionInvariantsTests` со штормом параллельных задач (Task storms).

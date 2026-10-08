@@ -1,38 +1,37 @@
-# Scenario: Packet Loss Resilience
+# Сценарий: Устойчивость при Потере Пакетов (Packet Loss)
 
-## 1. Description
-Simulates severe wireless transmission degradation and censorship-induced packet drops by injecting synthetic packet loss between the iOS client and the upstream proxy server.
+## 1. Описание
+Симулирует сильное ухудшение беспроводного радиоканала и блокировки пакетов со стороны DPI-систем цензуры путем искусственного сброса части сетевых пакетов между клиентом iOS и прокси-сервером.
 
 ---
 
-## 2. Parameter Matrix
+## 2. Матрица параметров и ожидаемое поведение
 
-| Profile | Packet Loss | Target Protocol | Expected Behavior |
+| Профиль | Потеря пакетов | Целевой протокол | Ожидаемое поведение |
 | :--- | :---: | :--- | :--- |
-| **Low Loss** | 1% | VLESS (TCP), Trojan | No noticeable user degradation; standard TCP retransmissions handle drops. |
-| **Medium Loss** | 5% | VLESS, Hysteria 2 | Hysteria 2 Brutal Congestion retains >80% bandwidth; TCP protocols throttle slightly. |
-| **High Loss** | 20% | VLESS, Hysteria 2 | TCP connections suffer latency spikes; Hy2 UDP stream remains stable. |
-| **Extreme Loss** | 50% | All Protocols | Latency indicator increases; `ConnectionCoordinator` holds tunnel without crashing. |
+| **Низкие потери** | 1% | VLESS (TCP), Trojan | Незаметно для пользователя; стандартные повторные передачи TCP компенсируют сброс. |
+| **Средние потери** | 5% | VLESS, Hysteria 2 | Hysteria 2 с алгоритмом Brutal сохраняет >80% скорости; TCP-протоколы слегка замедляются. |
+| **Высокие потери** | 20% | VLESS, Hysteria 2 | У TCP наблюдаются задержки; UDP-поток Hy2 сохраняет стабильную доставку. |
+| **Экстремальные потери**| 50% | Все протоколы | Индикатор пинга вырастает; `ConnectionCoordinator` удерживает сессию без падения процесса. |
 
 ---
 
-## 3. macOS Reproduction Procedure (dummynet / pfctl)
+## 3. Процедура воспроизведения на macOS (dummynet / pfctl)
 
 ```bash
-# 1. Create packet shaping pipe with 20% packet drop
+# 1. Создание канала шейпинга с потерей 20% пакетов
 sudo dnctl pipe 1 config plr 0.20
 
-# 2. Assign pipe to outgoing proxy traffic
+# 2. Направление исходящего прокси-трафика в созданный канал
 echo "dummynet out proto tcp to any port 443 pipe 1" | sudo pfctl -f - -e
 
-# 3. Restore to clean state (Safety command)
+# 3. Восстановление исходного состояния сети (Команда сброса)
 sudo pfctl -d && sudo dnctl -q flush
 ```
 
 ---
 
-## 4. Verification Checkpoints
-- [ ] UI remains responsive throughout packet loss injection.
-- [ ] Tunnel extension does not crash with `SIGPIPE` or out-of-memory errors.
-- [ ] Real-time throughput graph reflects degradation without UI freeze.
-
+## 4. Контрольные точки верификации
+- [ ] Интерфейс пользователя остается отзывчивым во время сброса пакетов.
+- [ ] Сетевое расширение туннеля не падает по ошибкам `SIGPIPE` или нехватке памяти.
+- [ ] График скорости в приложении отражает реальные задержки без зависания UI.

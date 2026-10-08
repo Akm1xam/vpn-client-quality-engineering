@@ -1,48 +1,47 @@
-# Security & Privacy Test Cases
+# Тест-Кейсы Безопасности и Конфиденциальности (Security & Privacy)
 
-## SEC-LOG-001: Redaction of Sensitive Credentials in Logs
-- **Priority**: P0 (Blocker)
-- **Preconditions**:
-  - `SanitizedLogger` instantiated.
-- **Test Data**: Strings containing reality public keys, passwords, UUIDs, and private tokens.
-- **Steps**:
-  1. Emit log message with query parameters: `vless://uuid-secret-12345@1.2.3.4:443?pbk=my-secret-reality-key&password=secretpass`.
-  2. Retrieve stored log records from in-memory ring buffer.
-  3. Inspect log content for presence of `uuid-secret-12345` or `my-secret-reality-key`.
-- **Expected Result**:
-  - Sensitive values are replaced with masked placeholders (`REDACTED`).
-  - No raw secret values exist in memory or console stream.
-- **Automation Candidate**: Yes (`ViaTests/SecurityAndPrivacyValidationTests.swift`).
-
----
-
-## SEC-STR-001: Resilient Keychain Storage & Fallback Encryption
-- **Priority**: P1 (Critical)
-- **Preconditions**:
-  - Device running in an environment where Keychain access may be restricted or locked (e.g. background execution before first user unlock).
-- **Test Data**: Server configuration with sensitive password credentials.
-- **Steps**:
-  1. Trigger server store persist operation.
-  2. Simulate Keychain failure with OSStatus `-34018`.
-  3. Verify whether credential is dropped or written to fallback credentials directory.
-  4. Retrieve credential via `secretForServer(_:)`.
-- **Expected Result**:
-  - `ServerStore` falls back to encrypted file storage under App Group container.
-  - Secret is successfully recovered without failing the connection lifecycle.
-- **Automation Candidate**: Yes (`ViaTests/StorageAndFallbackIntegrationTests.swift`).
+## SEC-LOG-001: Маскирование чувствительных данных в логах
+- **Приоритет**: P0 (Блокирующий)
+- **Предусловия**:
+  - Экземпляр `SanitizedLogger` инициализирован.
+- **Тестовые данные**: Строки, содержащие открытые ключи Reality, пароли, токены и UUID.
+- **Шаги воспроизведения**:
+  1. Записать в лог сообщение со строкой подключения: `vless://uuid-secret-12345@198.51.100.1:443?pbk=MySecretPublicKey123&password=SecretPassword999`.
+  2. Извлечь сохраненные записи из кольцевого буфера памяти.
+  3. Проверить наличие подстрок `uuid-secret-12345`, `MySecretPublicKey123` или `SecretPassword999`.
+- **Ожидаемый результат**:
+  - Чувствительные значения заменяются на маркеры `REDACTED`.
+  - В памяти и системной консоли отсутствуют открытые пароли и ключи.
+- **Кандидат на автоматизацию**: Да (`ViaTests/SecurityAndPrivacyValidationTests.swift`).
 
 ---
 
-## SEC-TEL-001: Verification of Zero External Telemetry SDKs
-- **Priority**: P0 (Blocker)
-- **Preconditions**:
-  - Project source tree and `Package.swift`.
-- **Test Data**: List of prohibited SDK names (Firebase, Sentry, Mixpanel, AppsFlyer, Amplitude, TelemetryDeck).
-- **Steps**:
-  1. Run recursive dependency and symbol scan across all targets in `Via.xcodeproj` and `Package.swift`.
-  2. Inspect dynamic framework links in build artifacts.
-- **Expected Result**:
-  - 0 matches found for prohibited telemetry providers.
-  - No network connections initiated on launch other than user-specified VPN endpoints.
-- **Automation Candidate**: Yes (`ViaTests/SecurityAndPrivacyValidationTests.swift`).
+## SEC-STR-001: Отказоустойчивое сохранение в Keychain и аварийный фолбэк
+- **Приоритет**: P1 (Критический)
+- **Предусловия**:
+  - Устройство работает в условиях блокировки доступа к Keychain (напр. старт расширения в фоне до первого ввода пароля разблокировки).
+- **Тестовые данные**: Серверная конфигурация с паролем.
+- **Шаги воспроизведения**:
+  1. Выполнить операцию сохранения сервера в хранилище.
+  2. Сымитировать сбой системного Keychain с кодом ошибки `-34018`.
+  3. Проверить, сохранен ли пароль в резервный контейнер App Group.
+  4. Запросить пароль через метод `secretForServer(_:)`.
+- **Ожидаемый результат**:
+  - `ServerStore` прозрачно переключается на защищенную файловую папку внутри App Group.
+  - Пароль успешно восстанавливается, предотвращая срыв подключения к VPN.
+- **Кандидат на автоматизацию**: Да (`ViaTests/StorageAndFallbackIntegrationTests.swift`).
 
+---
+
+## SEC-TEL-001: Подтверждение отсутствия сторонних аналитических SDK
+- **Приоритет**: P0 (Блокирующий)
+- **Предусловия**:
+  - Исходный код проекта и файл `Package.swift`.
+- **Тестовые данные**: Список запрещенных аналитических SDK (Firebase, Sentry, Mixpanel, AppsFlyer, Amplitude, TelemetryDeck).
+- **Шаги воспроизведения**:
+  1. Выполнить рекурсивный поиск по символам и зависимостям в `Via.xcodeproj` и `Package.swift`.
+  2. Проверить слинкованные динамические фреймворки в готовом бинарнике.
+- **Ожидаемый результат**:
+  - 0 совпадений по запрещенным аналитическим библиотекам.
+  - Приложение не инициирует никаких сетевых запросов при запуске, кроме обращений к выбранному VPN-узлу.
+- **Кандидат на автоматизацию**: Да (`ViaTests/SecurityAndPrivacyValidationTests.swift`).

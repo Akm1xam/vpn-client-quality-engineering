@@ -1,68 +1,67 @@
-# Release Quality Gates & Criteria
+# Критерии Готовности к Релизу и Гейты Качества (Release Criteria)
 
-## 1. Quality Gates Overview
+## 1. Обзор гейтов качества
 
-A build of **Via** may only transition to Production / App Store distribution when all quality gates defined below are satisfied.
+Сборка клиента **Via** допускается к выпуску в App Store или распространению среди пользователей только при успешном прохождении всех установленных гейтов качества:
 
 ```
-       [ GATE 1: Static Checks & Concurrency ]
-      - Swift 6 strict concurrency checks: 0 warnings
-      - Static telemetry scan: 0 trackers detected
+       [ ГЕЙТ 1: Статический анализ и конкурентность ]
+      - Проверка Swift 6 strict concurrency: 0 предупреждений
+      - Сканирование на стороннюю телеметрию: 0 трекеров
                          │
                          ▼
-        [ GATE 2: Automated CI Test Suites ]
-      - Unit & Integration pass rate: 100%
-      - State machine stress suite: 0 race conditions
+        [ ГЕЙТ 2: Автоматические наборы тестов CI ]
+      - Успешность прохождения Unit и Integration тестов: 100%
+      - Стресс-тест состояний гонки: 0 дедлоков
                          │
                          ▼
-        [ GATE 3: Performance & Memory Budget ]
-      - Extension resident memory: < 15 MB envelope
-      - Connection handshake latency: within baseline
+        [ ГЕЙТ 3: Нагрузка и бюджет памяти ]
+      - Resident memory расширения PacketTunnel: строго < 15 МБ
+      - Время установки соединения: в пределах допустимого базового уровня
                          │
                          ▼
-        [ GATE 4: Device Lab & Security Audit ]
-      - Zero DNS leaks across Wi-Fi / LTE handoff
-      - 0 open P0 (Blocker) or P1 (Critical) defects
+        [ ГЕЙТ 4: Лаборатория устройств и безопасность ]
+      - Ноль утечек DNS при миграции сетей Wi-Fi ↔ LTE
+      - 0 открытых дефектов уровня P0 (Блокирующий) и P1 (Критический)
 ```
 
 ---
 
-## 2. Severity Classification & Gate Thresholds
+## 2. Классификация дефектов и пороги допуска
 
-### 2.1 P0 Defects (Blocker)
-- **Definition**: Tunnel fails to connect; user traffic unencrypted outside tunnel; extension killed due to memory limit; app crashes on launch; sensitive passwords logged in plaintext.
-- **Release Threshold**: **Strictly 0 allowed.**
+### 2.1 Дефекты P0 (Блокирующие)
+- **Определение**: Туннель не поднимается; пользовательский трафик уходит в открытом виде мимо VPN; расширение падает по нехватке памяти (`EXC_RESOURCE`); приложение вылетает при запуске; пароли или приватные ключи пишутся в открытые системные логи.
+- **Порог релиза**: **Строго 0.**
 
-### 2.2 P1 Defects (Critical)
-- **Definition**: Automatic reconnect loop after network drops; DNS resolution fails for specific domains; HWID lock rejection from supported panel; localized UI freeze during configuration import.
-- **Release Threshold**: **0 allowed without signed mitigation waiver from Project Lead.**
+### 2.2 Дефекты P1 (Критические)
+- **Определение**: Бесконечный цикл переподключения при кратковременном обрыве сети; выборочный сбой разрешения доменов через DoH; отказ авторизации HWID на поддерживаемых панелях; зависание UI при парсинге больших подписок.
+- **Порог релиза**: **0 без подписанного документального обоснования.**
 
-### 2.3 P2 Defects (Major)
-- **Definition**: Non-critical UI glitch in Dark/Light mode; cosmetic latency graph jitter; non-breaking delay in subscription metadata refresh.
-- **Release Threshold**: $\le 3$ known issues documented in release notes.
+### 2.3 Дефекты P2 (Значительные)
+- **Определение**: Незначительные косметические огрехи в темной/светлой теме; кратковременное дрожание графика задержки; задержка обновления второстепенных метаданных подписки.
+- **Порог релиза**: Не более 3 известных дефектов, обязательно отраженных в примечаниях к релизу.
 
 ---
 
-## 3. Quantitative Criteria
+## 3. Количественные показатели
 
-| Quality Dimension | Metric | Required Threshold | Verification Method |
+| Критерий качества | Метрика | Требуемый порог | Метод проверки |
 | :--- | :--- | :--- | :--- |
-| **Unit Test Coverage** | Executed test cases in SPM | 100% passing tests | `swift test` |
-| **Smoke Suite** | Core connection flows | 100% pass rate | CI PR Workflow |
-| **Extension Memory** | Resident memory (RSS) in Tunnel | **< 15.0 MB project envelope** | Xcode Instruments / Memory Benchmark |
-| **Main App Memory** | Resident memory (RSS) in UI App | **< 60.0 MB** | Memory Benchmark |
-| **Data Plane Privacy** | Unencrypted DNS queries | **0 detected queries** | Wireshark Packet Audit |
-| **Log Sanitization** | Sensitive keywords in system logs | **0 instances of unmasked secrets** | Automated log scanner |
-| **Reconnect Resilience** | Auto-recovery after 10s network loss | Recovery within exponential backoff window | Device Lab Network Chaos |
-| **Telemetry Footprint** | External analytics dependencies | **0 third-party analytics libraries** | Dependency graph audit |
+| **Покрытие тестами** | Выполняемые тесты в пакете SPM | 100% успешных тестов | `swift test` |
+| **Smoke-набор** | Базовые сценарии подключения | 100% прохождение | PR-пайплайн CI |
+| **Память расширения** | Resident memory (RSS) в PacketTunnel | **< 15.0 МБ (бюджет проекта)** | Xcode Instruments / Скрипт бенчмарка |
+| **Память приложения** | Resident memory (RSS) в основном приложении | **< 60.0 МБ** | Скрипт бенчмарка |
+| **Приватность данных** | Незашифрованные DNS-пакеты в сети | **0 обнаруженных пакетов** | Анализ дампа Wireshark |
+| **Санитизация логов** | Ключевые слова секретов в открытых логах | **0 незамаскированных секретов** | Автоматизированный сканер |
+| **Отказоустойчивость** | Восстановление после обрыва связи на 10 сек | Успешное переподключение по алгоритму | Тестовая лаборатория роутера |
+| **Отсутствие телеметрии**| Сторонние аналитические библиотеки | **0 внешних трекеров** | Проверка графа зависимостей |
 
 ---
 
-## 4. Device Lab Sign-Off Matrix
+## 4. Матрица верификации на физических устройствах
 
-Prior to submission, testing must be completed on at least two physical hardware tiers:
+Перед отправкой сборки на публикацию обязательна проверка минимум на трех категориях оборудования:
 
-- [ ] **Tier A**: iPhone running latest iOS release (e.g., iPhone 15/16/17 running iOS 18+).
-- [ ] **Tier B**: Older supported iPhone running baseline iOS (e.g., iPhone 11/12 running iOS 17.0).
-- [ ] **Tier C**: Apple Silicon Mac running macOS Sonoma / Sequoia.
-
+- [ ] **Категория A**: Флагманский iPhone с актуальной версией iOS (напр. iPhone 15/16/17 на iOS 18+).
+- [ ] **Категория B**: Базовый поддерживаемый iPhone предыдущих поколений (напр. iPhone 11/12 на iOS 17.0).
+- [ ] **Категория C**: Компьютер Mac на базе Apple Silicon под управлением macOS Sonoma / Sequoia.

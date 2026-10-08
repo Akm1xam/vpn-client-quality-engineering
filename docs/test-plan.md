@@ -1,76 +1,75 @@
-# Test Plan & Execution Matrix
+# План Тестирования и График Выполнения (Test Plan)
 
-## 1. Overview & Scope
+## 1. Цели и границы плана
 
-This execution-oriented Test Plan defines the schedules, environments, and suites required to qualify builds of **Via** for release.
+Настоящий План Тестирования регламентирует процесс выполнения проверок, состав тестовых наборов и распределение сред для допуска сборок **Via** к релизу.
 
 ---
 
-## 2. Test Execution Tiers
+## 2. Уровни выполнения проверок
 
 ```
-[ Tier 1: Pull Request Gate ]
-  ├── Swift 6 Strict Concurrency Static Analysis
-  ├── SPM Unit & Parser Test Suite (Fast: < 15s)
-  └── Telemetry & Plaintext Secret Scans
+[ Уровень 1: Гейт Pull Request ]
+  ├── Статический анализ строгой конкурентности Swift 6
+  ├── Модульные тесты парсеров и логики в SPM (быстро: < 15 сек)
+  └── Сканирование на отсутствие телеметрии и открытых ключей
           │
-[ Tier 2: Nightly Automation ]
-  ├── Full Regression Suite on Simulator (iPhone 18 Pro)
-  ├── State Machine Race Condition Storms (100 iterations)
-  └── XCUITest Critical Path Automation
+[ Уровень 2: Ночные автоматические прогоны (Nightly) ]
+  ├── Полный регрессионный прогон на симуляторе (iPhone 18 Pro)
+  ├── Стресс-тест состояний гонки автомата соединений (100 итераций)
+  └── XCUITest сквозное тестирование интерфейса
           │
-[ Tier 3: Pre-Release Device Lab ]
-  ├── Physical iOS Device Tunnel Deployment
-  ├── Wi-Fi ↔ Cellular Network Chaos Scenarios
-  ├── 60-Minute Memory Envelope Verification (< 15 MB)
-  └── Wireshark DNS / IPv6 Leak Audit
+[ Уровень 3: Предрелизная лаборатория устройств ]
+  ├── Развертывание туннеля на физическом iPhone с тестовым профилем
+  ├── Сценарии сетевого хаоса: миграция Wi-Fi ↔ Мобильный интернет
+  ├── 60-минутный контроль бюджета оперативной памяти (< 15 МБ)
+  └── Аудит утечек DNS и IPv6 через Wireshark на роутере
 ```
 
 ---
 
-## 3. Test Suites
+## 3. Состав тестовых наборов
 
-### 3.1 Smoke Test Suite (`SMOKE-REQ`)
-Executed on every PR and build candidate.
-- `FUN-VPN-001`: Clean connection to pre-configured VLESS Reality node.
-- `FUN-VPN-002`: Clean disconnection and interface teardown.
-- `FUN-CFG-001`: Parse multi-node JSON subscription and verify node count > 0.
-- `SEC-LOG-001`: Diagnostic log sanitization audit.
+### 3.1 Smoke-набор (`SMOKE-REQ`)
+Запускается на каждый коммит и Pull Request.
+- `FUN-VPN-001`: Чистое подключение к предварительно настроенному узлу VLESS Reality.
+- `FUN-VPN-002`: Чистый разрыв соединения и сворачивание интерфейса.
+- `FUN-CFG-001`: Разбор многонодовой JSON-подписки и проверка количества узлов > 0.
+- `SEC-LOG-001`: Аудит маскирования диагностических логов в памяти.
 
-### 3.2 Regression Test Suite (`REG-ALL`)
-Executed prior to release tag creation.
-- All functional tests across VLESS, Hysteria 2, Trojan, and Shadowsocks.
-- App Group persistence and Keychain fallback validation.
-- UI settings persistence (LAN Bypass, Custom DoH, Kill Switch).
+### 3.2 Регрессионный набор (`REG-ALL`)
+Запускается перед созданием релизного тега.
+- Все функциональные тесты протоколов VLESS, Hysteria 2, Trojan и Shadowsocks.
+- Проверка хранилища App Group и аварийного фолбэка Keychain.
+- Валидация сохранения пользовательских настроек (LAN Bypass, Custom DoH, Kill Switch).
 
-### 3.3 Network Resilience Suite (`NET-RES`)
-Executed in the physical device lab.
-- Packet loss injection (1%, 5%, 20%, 50%).
-- Latency injection (50ms, 200ms, 1000ms).
-- Dynamic IP address change during streaming playback.
-- Captive portal detection and user feedback.
+### 3.3 Набор сетевой устойчивости (`NET-RES`)
+Выполняется на физическом устройстве в тестовой лаборатории.
+- Инжекция потерь пакетов (1%, 5%, 20%, 50%).
+- Инжекция задержек (50 мс, 200 мс, 1000 мс).
+- Динамическая смена внешнего IP-адреса во время непрерывного стриминга.
+- Реакция на страницу авторизации Captive Portal.
 
-### 3.4 Performance & Stress Suite (`PERF-STR`)
-- `PERF-MEM-001`: Memory measurement during idle tunnel (target: < 15 MB).
-- `PERF-MEM-002`: Memory measurement during continuous 50 Mbps file download.
-- `PERF-STR-001`: 50 rapid Connect/Disconnect cycles in under 3 minutes.
+### 3.4 Нагрузочный набор и замеры памяти (`PERF-STR`)
+- `PERF-MEM-001`: Замер оперативной памяти туннеля в режиме простоя (цель: < 15 МБ).
+- `PERF-MEM-002`: Замер памяти при непрерывной загрузке файла на скорости 50 Мбит/с.
+- `PERF-STR-001`: 50 быстрых циклов Подключить/Отключить менее чем за 3 минуты.
 
 ---
 
-## 4. Test Data & Fixtures
+## 4. Тестовые данные и фикстуры
 
-| Category | Fixture / Source | Description | Safety Consideration |
+| Категория | Фикстура / Источник | Описание | Соображения безопасности |
 | :--- | :--- | :--- | :--- |
-| **VLESS Reality** | `fixtures/vless_reality.json` | Sample configuration targeting lab gateway | Uses test-only dummy public keys. |
-| **Hysteria 2** | `fixtures/hysteria2_sample.uri` | Hy2 link with UDP congestion settings | Points to RFC 5737 documentation prefix. |
-| **Batch JSON** | `fixtures/flozvpn_batch.json` | Sanitized 42-node subscription array | Production server IPs replaced with test ranges. |
-| **Malformed** | `fixtures/corrupted_config.json` | Syntax errors, missing UUID, invalid ports | Used strictly in negative unit tests. |
+| **VLESS Reality** | `fixtures/vless_reality.json` | Конфигурация для тестового шлюза лаборатории | Использует тестовые одноразовые публичные ключи. |
+| **Hysteria 2** | `fixtures/hysteria2_sample.uri` | Ссылка Hy2 с параметрами Brutal Congestion | Указывает на документационный диапазон RFC 5737. |
+| **Пакетный JSON** | `fixtures/flozvpn_batch.json` | Обезличенный массив подписки на 42 узла | Реальные IP-адреса заменены на тестовые подсети. |
+| **Поврежденный конфиг** | `fixtures/corrupted_config.json` | Синтаксические ошибки, нет UUID, битый порт | Используется строго в негативных тестах. |
 
 ---
 
-## 5. Roles & Responsibilities
+## 5. Роли и ответственность
 
-- **SDET / Automation Engineer**: Maintain Swift Testing suites, XCUITest scripts, and CI workflows.
-- **QA Lead**: Review test execution results, manage risk matrix, and sign off on release quality gates.
-- **Developer**: Address blocking P0/P1 defects, preserve test doubles when refactoring production actors.
-
+- **Инженер по автоматизации (SDET)**: Поддержка Swift Testing наборов, XCUITest скриптов и CI пайплайнов.
+- **QA Lead**: Анализ результатов прогонов, актуализация матрицы рисков, подписание релизных гейтов.
+- **Разработчик (iOS Developer)**: Устранение дефектов P0/P1, сохранение тестовых дублеров при рефакторинге.

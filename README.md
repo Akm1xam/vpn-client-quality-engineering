@@ -1,195 +1,199 @@
-# Via — VPN Client Quality Engineering
+# Via — Инженерия Качества (Quality Engineering)
 
-Quality Engineering framework for an Apple NetworkExtension VPN client built with Swift 6 and Xray-core.
+Фреймворк обеспечения качества и автоматизации тестирования для VPN-клиента на базе Apple NetworkExtension, Swift 6 и Xray-core.
 
 <p align="left">
-  <a href="#test-matrix"><img src="https://img.shields.io/badge/Test%20Suites-16%20Passing-10b981?style=flat-square&logo=apple&logoColor=white" alt="Tests" /></a>
-  <a href="#test-matrix"><img src="https://img.shields.io/badge/Framework-Swift%20Testing-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift Testing" /></a>
-  <a href="#quality-gates"><img src="https://img.shields.io/badge/Memory%20Budget-%3C%2015%20MB-38bdf8?style=flat-square" alt="Memory Budget" /></a>
-  <a href="#security-verification"><img src="https://img.shields.io/badge/Privacy-0%20DNS%20Leaks-8b5cf6?style=flat-square" alt="Zero Leaks" /></a>
-  <a href="#security-verification"><img src="https://img.shields.io/badge/Telemetry-0%20Trackers-10b981?style=flat-square" alt="Zero Telemetry" /></a>
+  <a href="#матрица-автоматизированных-тестов"><img src="https://img.shields.io/badge/Тесты-16%20Успешно-10b981?style=flat-square&logo=apple&logoColor=white" alt="Тесты" /></a>
+  <a href="#матрица-автоматизированных-тестов"><img src="https://img.shields.io/badge/Фреймворк-Swift%20Testing-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift Testing" /></a>
+  <a href="#релизные-критерии-и-гейты-качества"><img src="https://img.shields.io/badge/Бюджет%20Памяти-%3C%2015%20МБ-38bdf8?style=flat-square" alt="Бюджет Памяти" /></a>
+  <a href="#безопасность-и-приватность"><img src="https://img.shields.io/badge/Приватность-0%20Утечек%20DNS-8b5cf6?style=flat-square" alt="Ноль Утечек" /></a>
+  <a href="#безопасность-и-приватность"><img src="https://img.shields.io/badge/Телеметрия-0%20Трекеров-10b981?style=flat-square" alt="Ноль Телеметрии" /></a>
 </p>
 
 ---
 
-### Engineering Predictability for Unpredictable Networks
+### Инженерная надежность в нестабильных сетях
 
-The **Via Quality Engineering Framework** is a testing subsystem designed for an Apple `NetworkExtension` VPN client. Operating at the boundary between user space and the Darwin kernel, it prioritizes **data-plane isolation**, **deterministic actor state invariants**, **sub-15 MB memory budget compliance**, and **resilience in hostile network conditions**.
-
----
-
-## Architecture & System Under Test (SUT)
-
-```
-Via Application (SwiftUI / Host Process)
-├── Presentation Layer (DesignSystem / Feature Views)
-├── Domain Model Layer (Server, RoutingProfile, DNSProfile, Source)
-├── Storage Layer (ServerStore, SourceStore, SettingsStore Actors)
-├── Configuration Layer (UniversalConfigurationParser, SourceUpdater with HWID)
-└── VPN Orchestration Layer (ConnectionCoordinator Actor, XrayConfigCompiler, RuntimeSnapshotManager)
-        │
-        ├── IPC via App Group (`group.com.via.vpn`) & Shared Keychain
-        │
-Packet Tunnel Extension (NEPacketTunnelProvider / Separate Process)
-├── System Tunnel Configuration (NEPacketTunnelNetworkSettings)
-├── Virtual Interface Binding (NEPacketTunnelFlow)
-├── Low-Level Bridge (XrayBridge C/cgo interface)
-└── Pinned Proxy Core (Xray-core v1.8.24)
-        │
-Outbound Proxy Nodes (VLESS Reality, Hysteria 2, Trojan gRPC, Shadowsocks 2022)
-```
+Фреймворк **Via Quality Engineering (QE)** спроектирован специально для валидации VPN- и proxy-клиента на базе системного Apple `NetworkExtension`. Работая на стыке пространства пользователя (User Space) и ядра Darwin, фреймворк гарантирует:
+- **Полную изоляцию плоскости данных (Data-Plane)**: отсутствие утечек DNS и IPv6 за пределы интерфейса туннеля.
+- **Детерминированность автомата состояний**: предотвращение гонок данных (race conditions) при параллельных вызовах внутри Swift 6 акторов.
+- **Соблюдение жесткого бюджета памяти**: удержание Packet Tunnel Extension в пределах проектного конверта < 15 МБ.
+- **Автоматическое восстановление соединения**: отказоустойчивость при смене сетей (Wi-Fi ↔ LTE/5G) и агрессивной цензуре.
 
 ---
 
-## Verification Pipeline & Test Pyramid
-
-Rather than relying on brittle UI automation, Via structures testing around operating-system boundaries:
+## Архитектура тестируемой системы (SUT)
 
 ```
-               [ UI Tests (XCUITest) ]
-              - End-to-end user flows
-              - Server selection & toggle
-              - Accessibility identifiers
-                         ▲
-            [ Network Chaos & Device Lab ]
-           - Wi-Fi ↔ Cellular handoff
-           - High latency & packet loss
-           - Sleep / wake transitions
-                         ▲
-         [ Integration Tests (Swift Testing) ]
-        - ConnectionCoordinator state transitions
-        - RuntimeSnapshotManager atomic persistence
-        - ServerStore Keychain fallback handling
-                         ▲
-           [ Unit Tests (Swift Testing) ]
-          - UniversalConfigurationParser logic
-          - XrayConfigCompiler stream builders
-          - Exponential backoff retry policy
+Via Application (Основной процесс интерфейса / SwiftUI)
+├── Слой представления (DesignSystem / Feature Views)
+├── Доменный слой (Server, RoutingProfile, DNSProfile, Source)
+├── Слой хранилища (Акторы ServerStore, SourceStore, SettingsStore)
+├── Слой конфигурации (UniversalConfigurationParser, SourceUpdater с HWID)
+└── Слой оркестрации VPN (Актор ConnectionCoordinator, XrayConfigCompiler, RuntimeSnapshotManager)
+        │
+        ├── Межпроцессное взаимодействие (IPC) через App Group (`group.com.via.vpn`) & Keychain
+        │
+Packet Tunnel Extension (NEPacketTunnelProvider / Изолированный процесс)
+├── Системные сетевые настройки (NEPacketTunnelNetworkSettings)
+├── Привязка к виртуальному интерфейсу (NEPacketTunnelFlow)
+├── Низкоуровневый C-мост (XrayBridge C/cgo interface)
+└── Прокси-ядро (Xray-core v1.8.24)
+        │
+Внешние прокси-узлы (VLESS Reality, Hysteria 2, Trojan gRPC, Shadowsocks 2022)
 ```
-
-### The 4 Verification Layers
-
-1. **Tier 1: Unit Invariants (50%)** — *Swift Testing (`@Suite`, `@Test`, `#expect`)*
-   - Fast sub-second execution (0.069s) requiring no network interfaces.
-   - Validates multi-node batch parsers, Xray stream setting compilers, and exponential backoff retry math.
-   - Guards against lifecycle race conditions (e.g. `connect-while-connecting` and `disconnect-while-disconnecting`).
-2. **Tier 2: Component Integration (30%)** — *Actors & Test Doubles*
-   - Verifies state handoffs across `ConnectionCoordinator`, `ServerStore`, and `RuntimeSnapshotManager`.
-   - Tests atomic packaging of `xray.json` configurations into the shared App Group container.
-   - Exercises the Keychain dual-persist fallback when sandboxed background extensions encounter error `-34018`.
-3. **Tier 3: User Journey Automation (10%)** — *Apple XCUITest*
-   - Navigates critical user flows using semantic `accessibilityIdentifier` tokens.
-   - Verifies connection toggle button states, server list rendering, and user-facing privacy guarantees.
-4. **Tier 4: Network Chaos Lab (10%)** — *Physical Hardware & Fault Injection*
-   - Real-world simulation of packet loss (1% to 50%), transoceanic latency, jitter, and interface migration.
-   - Non-destructive network scripts and Wireshark uplink sniffer audits to ensure zero unencrypted DNS leaks.
 
 ---
 
-## Quick Start: Running Tests
+## Пирамида тестирования и уровни верификации
+
+Вместо хрупких сквозных UI-тестов, архитектура верификации Via опирается на системные границы операционной системы:
+
+```
+               [ UI-тесты (XCUITest) ]
+              - Критические сценарии пользователя
+              - Выбор сервера и переключение туннеля
+              - Семантические accessibility identifiers
+                         ▲
+            [ Лаборатория хаоса и физические устройства ]
+           - Переключение Wi-Fi ↔ Мобильная сеть
+           - Высокий пинг, джиттер и потеря пакетов (1-50%)
+           - Спящий режим, экран блокировки, Captive Portal
+                         ▲
+         [ Интеграционные тесты (Swift Testing) ]
+        - Переходы состояний ConnectionCoordinator
+        - Атомарность снапшотов RuntimeSnapshotManager
+        - Резервное сохранение Keychain Fallback
+                         ▲
+           [ Модульные тесты (Swift Testing) ]
+          - Логика универсального парсера UniversalConfigurationParser
+          - Компилятор конфигураций XrayConfigCompiler
+          - Экспоненциальный откат повторных попыток (RetryPolicy)
+```
+
+### 4 уровня верификации
+
+1. **Уровень 1: Модульные инварианты (50%)** — *Swift Testing (`@Suite`, `@Test`, `#expect`)*
+   - Мгновенное выполнение (0.069 сек) без необходимости в сетевых интерфейсах.
+   - Проверка разбора пакетных подписок, генерации потоковых настроек Xray и алгоритмов повторных попыток.
+   - Защита от гонок жизненного цикла (повторные `connect-while-connecting` и `disconnect-while-disconnecting`).
+2. **Уровень 2: Интеграция компонентов (30%)** — *Акторы и тестовые дублеры (Test Doubles)*
+   - Проверка взаимодействия между акторами `ConnectionCoordinator`, `ServerStore` и `RuntimeSnapshotManager`.
+   - Тестирование атомарной упаковки файла `xray.json` в контейнер App Group.
+   - Валидация Dual-Persist стратегии при системных сбоях связки ключей Keychain (ошибка `-34018`).
+3. **Уровень 3: Автоматизация интерфейса (10%)** — *Apple XCUITest*
+   - Тестирование ключевых путей пользователя с использованием токенов `accessibilityIdentifier`.
+   - Проверка состояний кнопки подключения, отображения списка серверов и пунктов политики приватности.
+4. **Уровень 4: Лаборатория сетевого хаоса (10%)** — *Физические устройства и инжекция сбоев*
+   - Воспроизведение потери пакетов (от 1% до 50%), трансокеанских задержек и флаппинга интерфейсов.
+   - Неразрушающие проверочные скрипты и сниффинг трафика через Wireshark для гарантии отсутствия утечек DNS.
+
+---
+
+## Быстрый старт: Запуск тестов
 
 ```bash
-# 1. Clean extended attributes and execute complete test suite
+# 1. Очистка расширенных атрибутов macOS и запуск полного набора тестов
 xattr -c -r Sources Tests Targets vpn-client-quality-engineering Package.swift 2>/dev/null
 swift test
 
-# 2. Run tests in Xcode for iOS Simulator (iPhone 18 Pro)
+# 2. Запуск тестов в Xcode для симулятора iOS (iPhone 18 Pro)
 xcodebuild test -scheme Via -destination 'platform=iOS Simulator,name=iPhone 18 Pro'
 
-# 3. Execute non-destructive DNS audit script
+# 3. Безопасная проверка DNS-резолверов
 ./network-lab/scripts/check_dns_leak.sh
 
-# 4. Measure resident memory of target process
+# 4. Замер потребления оперативной памяти процесса
 ./benchmarks/run_memory_benchmark.sh
 ```
 
 ---
 
-## Automated Test Catalog
+## Матрица автоматизированных тестов
 
-| Test Identifier | Category | Area | Invariant Verified | Tooling |
+| Идентификатор теста | Категория | Область | Проверяемый инвариант | Инструмент |
 | :--- | :--- | :--- | :--- | :--- |
-| **`testCleanLifecycleTransitions`** | State Machine | `VPN/State` | Clean `.disconnected` ➔ `.connected` ➔ `.disconnected` progression | Swift Testing |
-| **`testConnectWhileConnectingIgnored`**| Concurrency | `VPN/State` | Concurrent connect command is an idempotent no-op | Swift Testing |
-| **`testDisconnectWhileDisconnectedSafe`**| Concurrency | `VPN/State` | Redundant disconnect commands are safe no-ops | Swift Testing |
-| **`testRetryPolicyDelayCalculations`** | Reliability | `VPN/State` | Exponential backoff capped progression: 1s, 2s, 5s, 10s, 30s | Swift Testing |
-| **`testRapidToggleStress`** | Concurrency | `VPN/State` | 10 rapid connect/disconnect cycles under actor isolation without deadlocks | Swift Testing |
-| **`testLogSanitizerMasking`** | Security | `SharedCore` | Regex redaction of UUIDs, passwords, and Reality keys in logs | Swift Testing |
-| **`testHWIDPersistence`** | Subscriptions | `SharedCore` | Deterministic `x-hwid` signature conforming to `/^[a-zA-Z0-9=-]{10,64}$/` | Swift Testing |
-| **`testZeroTelemetryCompliance`** | Privacy | `ViaApp` | Dynamic reflection audit: 0 tracking SDK symbols linked | Swift Testing |
-| **`testServerStoreAddAndRetrieve`** | Integration | `Storage` | Actor-isolated server save, retrieve, and secret recovery | Swift Testing |
-| **`testRuntimeSnapshotAtomicCreation`**| Integration | `VPN/Compiler`| Atomic `xray.json` and network settings snapshot generation | Swift Testing |
-| **`CriticalUserJourneyUITests`** | End-to-End | `UITests` | App launch, server list rendering, and privacy bullet verification | XCUITest |
+| **`testCleanLifecycleTransitions`** | Автомат состояний | `VPN/State` | Корректный цикл: `.disconnected` ➔ `.connected` ➔ `.disconnected` | Swift Testing |
+| **`testConnectWhileConnectingIgnored`**| Конкурентность | `VPN/State` | Идемпотентность: повторный `connect` в процессе подключения игнорируется | Swift Testing |
+| **`testDisconnectWhileDisconnectedSafe`**| Конкурентность | `VPN/State` | Повторный вызов `disconnect` безопасен и не вызывает сбоев | Swift Testing |
+| **`testRetryPolicyDelayCalculations`** | Надежность | `VPN/State` | Ограниченный экспоненциальный откат: 1с, 2с, 5с, 10с, 30с | Swift Testing |
+| **`testRapidToggleStress`** | Нагрузка | `VPN/State` | 10 быстрых циклов переключения под защитой акторов без дедлоков | Swift Testing |
+| **`testLogSanitizerMasking`** | Безопасность | `SharedCore` | Regex-маскирование UUID, паролей и ключей Reality в логах | Swift Testing |
+| **`testHWIDPersistence`** | Подписки | `SharedCore` | Детерминированный заголовок `x-hwid` по формату `/^[a-zA-Z0-9=-]{10,64}$/` | Swift Testing |
+| **`testZeroTelemetryCompliance`** | Приватность | `ViaApp` | Проверка рефлексией: 0 трекинговых SDK слинковано в сборку | Swift Testing |
+| **`testServerStoreAddAndRetrieve`** | Интеграция | `Storage` | Акторное сохранение и надежное извлечение серверов и паролей | Swift Testing |
+| **`testRuntimeSnapshotAtomicCreation`**| Интеграция | `VPN/Compiler`| Атомарная сборка `xray.json` и профиля сетевых настроек | Swift Testing |
+| **`CriticalUserJourneyUITests`** | Сквозной (E2E) | `UITests` | Запуск приложения, рендеринг списка узлов, проверка приватности | XCUITest |
 
 ---
 
-## Quality Gates & Thresholds
+## Релизные критерии и гейты качества
 
-Every pull request and build candidate is evaluated against strict, non-negotiable release criteria:
+Каждый Pull Request и релизный билд проходит многоуровневый автоматический контроль:
 
 ```
-[ Gate 1: Static Concurrency ] ──► Swift 6 strict concurrency checks (0 warnings)
-                                    └── Telemetry scanner (0 tracking frameworks)
-[ Gate 2: Automated Tests ]    ──► 100% pass rate across all unit and integration tests
-[ Gate 3: Memory Envelope ]    ──► PacketTunnelExtension resident memory < 15.0 MB
-[ Gate 4: Security & Leakage ] ──► 0 plaintext credentials in logs; 0 DNS leaks
+[ Гейт 1: Статический анализ ] ──► Swift 6 strict concurrency (0 предупреждений)
+                                     └── Сканер телеметрии (0 внешних трекеров)
+[ Гейт 2: Автоматические тесты ] ──► 100% успешное прохождение Unit и Integration наборов
+[ Гейт 3: Бюджет памяти ]       ──► PacketTunnelExtension resident memory < 15.0 МБ
+[ Гейт 4: Безопасность ]        ──► 0 открытых паролей в логах; 0 утечек DNS
 ```
 
-- **P0 Defects**: **Strictly 0 allowed.** (Blocks release immediately).
-- **P1 Defects**: **0 allowed without signed mitigation.**
-- **Project Memory Budget**: Extension memory must remain within the **< 15 MB envelope** during 60-minute stress tests.
+- **Дефекты P0 (Блокирующие)**: **Строго 0.** Блокируют релиз немедленно.
+- **Дефекты P1 (Критические)**: **0 без подписанного обоснования.**
+- **Проектный бюджет памяти**: Потребление оперативной памяти расширения туннеля строго **< 15 МБ** в ходе 60-минутного стресс-теста.
 
 ---
 
-## CI vs. Device Lab Boundaries
+## Границы автоматизации: CI против физических устройств
 
-Because Apple's `NetworkExtension` framework interacts directly with the Darwin kernel and system privileges, tests are explicitly partitioned by execution capability:
+Поскольку фреймворк Apple `NetworkExtension` взаимодействует напрямую с ядром Darwin и требует привилегий операционной системы, проверки строго разделены:
 
-| Capability | CI-Compatible (Automated on GitHub Runner) | Device Lab (Physical Hardware Required) |
+| Возможность | Автоматизировано в CI (GitHub Runner) | Физическая лаборатория (Device Lab) |
 | :--- | :---: | :---: |
-| **Swift 6 Actor Concurrency & State Invariants** | ✅ Automated (`swift test`) | — |
-| **Multi-node JSON Subscription Parsing** | ✅ Automated (`swift test`) | — |
-| **In-Memory Log Sanitization & Redaction** | ✅ Automated (`swift test`) | — |
-| **Static Telemetry SDK Scanner** | ✅ Automated (`qa-quality-gates.yml`) | — |
-| **Simulated VPN Session Transitions** | ✅ Automated (`ViaTests`) | — |
-| **Native `NEPacketTunnelProvider` Kernel Binding** | ❌ Not CI-compatible | ✅ Physical iOS 17/18 Device |
-| **Physical Wi-Fi ↔ 5G Cellular Network Handoff** | ❌ Not CI-compatible | ✅ Physical iOS Device + SIM |
-| **Router-Level Packet Capture (DNS Leaks)** | ❌ Not CI-compatible | ✅ Wi-Fi AP + Wireshark Uplink |
-| **60-Minute Resident Memory Profiling** | ❌ Not CI-compatible | ✅ Xcode Instruments attached to PID |
-| **Physical Device Sleep/Wake Network Recovery** | ❌ Not CI-compatible | ✅ Manual Lab Verification |
+| **Swift 6 конкурентность и инварианты состояний** | ✅ Да (`swift test`) | — |
+| **Парсинг многонодовых подписок (FlozVPN)** | ✅ Да (`swift test`) | — |
+| **Санитизация логов в памяти и маскирование** | ✅ Да (`swift test`) | — |
+| **Статический аудит отсутствия телеметрии** | ✅ Да (`qa-quality-gates.yml`) | — |
+| **Симуляция переходов VPN-сессии** | ✅ Да (`ViaTests`) | — |
+| **Привязка к системному ядру `NEPacketTunnelProvider`** | ❌ Недоступно в виртуальной среде | ✅ Физический iPhone 17/18 |
+| **Бесшовный переход Wi-Fi ↔ 5G/LTE** | ❌ Недоступно в виртуальной среде | ✅ Физический iPhone + SIM-карта |
+| **Сниффинг пакетов на уровне роутера (утечки DNS)** | ❌ Недоступно в виртуальной среде | ✅ Точка доступа Wi-Fi + Wireshark |
+| **Профилирование памяти через Instruments (60 мин)** | ❌ Недоступно в виртуальной среде | ✅ Подключение к реальному процессу |
+| **Восстановление после сна/блокировки устройства** | ❌ Недоступно в виртуальной среде | ✅ Ручная валидация в лаборатории |
 
 ---
 
-## Repository Structure
+## Структура репозитория
 
 ```
 vpn-client-quality-engineering/
-├── .github/workflows/                 # CI quality gate workflow definitions
-├── README.md                          # Quality Engineering architecture & overview
+├── .github/workflows/                 # Описания CI-пайплайнов и гейтов качества
+├── README.md                          # Главная документация и обзор архитектуры QE
 ├── automation/
-│   ├── IntegrationTests/              # Component boundary tests (Actor IPC, Snapshots)
-│   ├── TestDoubles/                   # MockTunnelManager, FakeAppGroupStorage, TestFixtures
-│   ├── UITests/                       # XCUITest critical user journey automation
-│   └── UnitTests/                     # Swift Testing invariants & security verification
-├── benchmarks/                        # Memory benchmark scripts and JSON schemas
+│   ├── IntegrationTests/              # Интеграционные тесты компонентов (IPC, снапшоты)
+│   ├── TestDoubles/                   # Тестовые дублеры (MockTunnelManager, FakeAppGroupStorage)
+│   ├── UITests/                       # XCUITest автоматизация сценариев пользователя
+│   └── UnitTests/                     # Swift Testing тесты инвариантов и безопасности
+├── benchmarks/                        # Методология замеров памяти и JSON-схемы
 ├── docs/
-│   ├── release-criteria.md            # Quantitative quality gates & defect thresholds
-│   ├── risk-assessment.md             # RPN risk matrix & threat model
-│   ├── test-matrix.md                 # Traceability matrix mapping risks to tests
-│   ├── test-plan.md                   # Execution plan (Smoke, Regression, Chaos)
-│   └── test-strategy.md               # End-to-end test philosophy & objectives
+│   ├── release-criteria.md            # Измеримые критерии релиза и пороги дефектов
+│   ├── risk-assessment.md             # Матрица рисков RPN и модель угроз
+│   ├── test-matrix.md                 # Матрица трассируемости рисков к тестам
+│   ├── test-plan.md                   # План тестирования (Smoke, Regression, Chaos)
+│   └── test-strategy.md               # Стратегия и цели обеспечения качества
 ├── network-lab/
-│   ├── scenarios/                     # Documented fault-injection scenarios (loss, latency)
-│   └── scripts/                       # Non-destructive DNS audit & measurement scripts
+│   ├── scenarios/                     # Сценарии симуляции сбоев (потери, задержки)
+│   └── scripts/                       # Безопасные скрипты проверки сети и DNS
 ├── reports/
-│   ├── sanitized-samples/             # Production-safe defect investigation samples
-│   └── templates/                     # Standardized defect report templates
-└── test-cases/                        # Functional, network, performance, and security specs
+│   ├── sanitized-samples/             # Обезличенные примеры отчетов об ошибках
+│   └── templates/                     # Шаблоны баг-репортов и отчетов
+└── test-cases/                        # Функциональные, сетевые, нагрузочные и security кейсы
 ```
 
 ---
 
-## License & Attribution
+## Лицензия и условия использования
 
-- Part of the **Via** project, licensed under the [Mozilla Public License 2.0 (MPL-2.0)](../LICENSE).
-- Pinned Xray proxy runtime powered by [Xray-core](https://github.com/XTLS/Xray-core) (MPL-2.0).
+- Входит в состав проекта **Via**, распространяется под лицензией [Mozilla Public License 2.0 (MPL-2.0)](../LICENSE).
+- Ядро прокси-туннеля работает на базе [Xray-core](https://github.com/XTLS/Xray-core) (MPL-2.0).

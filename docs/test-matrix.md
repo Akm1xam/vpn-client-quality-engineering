@@ -1,30 +1,29 @@
-# Traceability & Test Matrix
+# Матрица Трассируемости и Покрытия (Test Matrix)
 
-This matrix links architectural components, risk definitions, test levels, and automation status across the Via client codebase.
+Данная матрица связывает архитектурные компоненты, оцененные риски, уровни тестирования и статус автоматизации в кодовой базе клиента Via.
 
 ---
 
-## 1. Traceability Matrix
+## 1. Матрица трассируемости
 
-| Test ID | Area | Requirement / Risk | Test Level | Platform | Automation Status | Priority | Covered Risks |
+| ID Теста | Область | Требование / Риск | Уровень теста | Платформа | Статус автоматизации | Приоритет | Закрываемые риски |
 | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :--- |
-| **FUN-VPN-001** | VPN Core | Clean connect lifecycle to valid server | Integration | Simulator / Device | **Automated (Swift Testing)** | P0 | `RISK-NET-001` |
-| **FUN-VPN-002** | VPN Core | Clean disconnect and interface teardown | Integration | Simulator / Device | **Automated (Swift Testing)** | P0 | `RISK-CONC-001` |
-| **FUN-CFG-001** | Config | Multi-node JSON array parsing (42+ nodes) | Unit | All (SPM) | **Automated (Swift Testing)** | P0 | `RISK-CFG-001` |
-| **FUN-CFG-002** | Config | Rejection of malformed / corrupt configs | Unit | All (SPM) | **Automated (Swift Testing)** | P1 | `RISK-CFG-001` |
-| **FUN-SUB-001** | Config | Remnawave `x-hwid` header generation | Unit | All (SPM) | **Automated (Swift Testing)** | P1 | `RISK-HWID-001` |
-| **STATE-REC-001**| State | Connect-while-connecting race prevention | Unit / Integration | All (SPM) | **Automated (Swift Testing)** | P0 | `RISK-CONC-001` |
-| **STATE-REC-002**| State | Disconnect-while-disconnecting invariance | Unit / Integration | All (SPM) | **Automated (Swift Testing)** | P1 | `RISK-CONC-001` |
-| **STATE-REC-003**| State | Exponential backoff delay calculation | Unit | All (SPM) | **Automated (Swift Testing)** | P1 | `RISK-NET-001` |
-| **NET-HND-001** | Network | Wi-Fi to Cellular handoff resilience | Network Chaos | Physical Device | **Manual / Device Lab** | P0 | `RISK-NET-001` |
-| **NET-RES-001** | Network | Auto-reconnect after temporary packet loss | Network Chaos | Physical Device | **Manual / Device Lab** | P1 | `RISK-NET-001` |
-| **SEC-LEAK-001**| Security| DNS query containment within tunnel | Security | Physical Device | **Automated Script / Lab** | P0 | `RISK-NET-002` |
-| **SEC-IP6-001** | Security| IPv6 traffic leak prevention (dual-stack) | Security | Physical Device | **Automated Script / Lab** | P0 | `RISK-NET-003` |
-| **SEC-LOG-001** | Privacy | Sensitive credential redaction in logs | Unit | All (SPM) | **Automated (Swift Testing)** | P0 | `RISK-SEC-001` |
-| **SEC-TEL-001** | Privacy | Zero telemetry SDKs verification | Static Analysis | CI (macOS) | **Automated (Shell / Git)** | P0 | `RISK-SEC-001` |
-| **PERF-MEM-001**| Perf | Extension memory footprint < 15 MB | Benchmark | Physical Device | **Benchmark Script / Lab** | P0 | `RISK-MEM-001` |
-| **PERF-STR-001**| Perf | 50 rapid connect/disconnect cycles | Stress | Simulator / Device | **Automated (Swift Testing)** | P1 | `RISK-CONC-001` |
-| **UI-CRIT-001** | UI | Connection toggle button state transitions | UI | iOS Simulator | **Automated (XCUITest)** | P1 | `RISK-CONC-001` |
-| **UI-CRIT-002** | UI | Server selection and list rendering | UI | iOS Simulator | **Automated (XCUITest)** | P2 | `RISK-CFG-001` |
-| **INT-STR-001** | Storage | Keychain error fallback to App Group | Integration | Simulator / macOS | **Automated (Swift Testing)** | P1 | `RISK-STR-001` |
-
+| **FUN-VPN-001** | Ядро VPN | Чистый цикл подключения к валидному узлу | Интеграционный | Симулятор / iPhone | **Автоматизирован (Swift Testing)** | P0 | `RISK-NET-001` |
+| **FUN-VPN-002** | Ядро VPN | Чистый разрыв соединения и сворачивание интерфейса | Интеграционный | Симулятор / iPhone | **Автоматизирован (Swift Testing)** | P0 | `RISK-CONC-001` |
+| **FUN-CFG-001** | Конфигурация | Разбор многонодового JSON-массива (42+ узлов) | Модульный | Все (SPM) | **Автоматизирован (Swift Testing)** | P0 | `RISK-CFG-001` |
+| **FUN-CFG-002** | Конфигурация | Отклонение битых и невалидных конфигураций | Модульный | Все (SPM) | **Автоматизирован (Swift Testing)** | P1 | `RISK-CFG-001` |
+| **FUN-SUB-001** | Конфигурация | Генерация заголовка `x-hwid` для Remnawave | Модульный | Все (SPM) | **Автоматизирован (Swift Testing)** | P1 | `RISK-HWID-001` |
+| **STATE-REC-001**| Состояния | Защита от гонки повторного подключения | Модульный / Интеграц. | Все (SPM) | **Автоматизирован (Swift Testing)** | P0 | `RISK-CONC-001` |
+| **STATE-REC-002**| Состояния | Безопасность повторного вызова отключения | Модульный / Интеграц. | Все (SPM) | **Автоматизирован (Swift Testing)** | P1 | `RISK-CONC-001` |
+| **STATE-REC-003**| Состояния | Расчет задержек экспоненциального отката | Модульный | Все (SPM) | **Автоматизирован (Swift Testing)** | P1 | `RISK-NET-001` |
+| **NET-HND-001** | Сеть | Устойчивость при переключении Wi-Fi ↔ LTE | Лаборатория хаоса | Физический iPhone | **Ручной / Device Lab** | P0 | `RISK-NET-001` |
+| **NET-RES-001** | Сеть | Авто-реконнект после временной потери пакетов | Лаборатория хаоса | Физический iPhone | **Ручной / Device Lab** | P1 | `RISK-NET-001` |
+| **SEC-LEAK-001**| Безопасность| Удержание DNS-запросов строго внутри туннеля | Безопасность | Физический iPhone | **Авто-скрипт / Device Lab** | P0 | `RISK-NET-002` |
+| **SEC-IP6-001** | Безопасность| Предотвращение утечек IPv6 в сетях Dual-Stack | Безопасность | Физический iPhone | **Авто-скрипт / Device Lab** | P0 | `RISK-NET-003` |
+| **SEC-LOG-001** | Приватность | Маскирование паролей и ключей в логах | Модульный | Все (SPM) | **Автоматизирован (Swift Testing)** | P0 | `RISK-SEC-001` |
+| **SEC-TEL-001** | Приватность | Подтверждение отсутствия трекеров и SDK | Статический анализ | CI (macOS) | **Автоматизирован (Shell / Git)** | P0 | `RISK-SEC-001` |
+| **PERF-MEM-001**| Нагрузка | Память расширения строго < 15 МБ | Бенчмарк | Физический iPhone | **Скрипт замеров / Device Lab** | P0 | `RISK-MEM-001` |
+| **PERF-STR-001**| Нагрузка | 50 быстрых циклов переключения туннеля | Стресс-тест | Симулятор / iPhone | **Автоматизирован (Swift Testing)** | P1 | `RISK-CONC-001` |
+| **UI-CRIT-001** | UI | Переключение состояний центральной кнопки | UI | iOS Симулятор | **Автоматизирован (XCUITest)** | P1 | `RISK-CONC-001` |
+| **UI-CRIT-002** | UI | Рендеринг и выбор узлов в списке серверов | UI | iOS Симулятор | **Автоматизирован (XCUITest)** | P2 | `RISK-CFG-001` |
+| **INT-STR-001** | Хранилище | Фолбэк в App Group при ошибке Keychain | Интеграционный | Симулятор / macOS | **Автоматизирован (Swift Testing)** | P1 | `RISK-STR-001` |

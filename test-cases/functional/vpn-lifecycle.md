@@ -1,57 +1,56 @@
-# Functional Test Cases: VPN Lifecycle
+# Функциональные Тест-Кейсы: Жизненный Цикл VPN (VPN Lifecycle)
 
-## FUN-VPN-001: Clean VPN Tunnel Establishment
-- **Priority**: P0 (Blocker)
-- **Preconditions**:
-  - Application installed with valid VPN entitlements.
-  - At least one active server configuration present in `ServerStore`.
-  - Device connected to functional Wi-Fi network.
-- **Test Data**: VLESS Reality server node (e.g. Frankfurt DE-04).
-- **Steps**:
-  1. Launch application and navigate to Home view.
-  2. Select the target VLESS Reality server.
-  3. Tap the central Connect button (`vpn_toggle_button`).
-  4. Observe state transition indicators on the UI.
-  5. Check active session details and latency graph.
-- **Expected Result**:
-  - State progresses through `preparing` -> `requestingPermission` -> `connecting` -> `connected`.
-  - The UI button reflects connected state with green accent.
-  - Active session reflects target server display name and host.
-  - Outbound traffic routes successfully through the tunnel.
-- **Automation Candidate**: Yes (`ViaTests/StateTransitionInvariantsTests.swift`).
-- **Observability**: `SanitizedLogger` reports `"VPN session established with server"`.
-
----
-
-## FUN-VPN-002: Clean VPN Tunnel Disconnection
-- **Priority**: P0 (Blocker)
-- **Preconditions**:
-  - Application actively in `.connected` state with active session.
-- **Test Data**: N/A
-- **Steps**:
-  1. Open application in connected state.
-  2. Tap the central Disconnect button.
-  3. Observe state progression and network interface restoration.
-- **Expected Result**:
-  - State transitions immediately to `disconnecting`, then `disconnected`.
-  - Session end time is recorded in active session model.
-  - Tunnel interface is torn down and direct routing is restored.
-- **Automation Candidate**: Yes (`ViaTests/StateTransitionInvariantsTests.swift`).
-- **Observability**: `SanitizedLogger` reports `"VPN session disconnected."`.
+## FUN-VPN-001: Чистая установка VPN-соединения
+- **Приоритет**: P0 (Блокирующий)
+- **Предусловия**:
+  - Приложение установлено с валидными сетевыми разрешениями (VPN Entitlements).
+  - В `ServerStore` присутствует хотя бы один настроенный узел.
+  - Устройство подключено к рабочей сети Wi-Fi.
+- **Тестовые данные**: Узел VLESS Reality (напр. Frankfurt DE-04).
+- **Шаги воспроизведения**:
+  1. Запустить приложение и открыть главный экран.
+  2. Выбрать целевой сервер VLESS Reality.
+  3. Нажать центральную кнопку подключения (`vpn_toggle_button`).
+  4. Проследить смену индикаторов фаз соединения в UI.
+  5. Проверить данные активной сессии и график пинга.
+- **Ожидаемый результат**:
+  - Состояние последовательно переходит: `preparing` ➔ `requestingPermission` ➔ `connecting` ➔ `connected`.
+  - Центральная кнопка подсвечивается зеленым акцентом активности.
+  - В сессии корректно отображаются имя сервера и его адрес.
+  - Исходящий интернет-трафик успешно маршрутизируется через туннель.
+- **Кандидат на автоматизацию**: Да (`ViaTests/StateTransitionInvariantsTests.swift`).
+- **Логирование**: В `SanitizedLogger` фиксируется запись `"VPN session established with server"`.
 
 ---
 
-## FUN-VPN-003: Connection with Explicit Server vs Optimal Auto-Selection
-- **Priority**: P1 (Critical)
-- **Preconditions**:
-  - `ServerStore` contains multiple servers with differing health scores (RTT latency).
-- **Test Data**:
-  - Server A: RTT 25ms (Health score: 25)
-  - Server B: RTT 120ms (Health score: 120)
-- **Steps**:
-  1. Trigger `connect(server: nil)` without specifying an explicit server.
-  2. Inspect target server selected by `ConnectionCoordinator`.
-- **Expected Result**:
-  - `ConnectionCoordinator` selects Server A due to lowest health selection score.
-- **Automation Candidate**: Yes (Unit test with Mock ServerStore).
+## FUN-VPN-002: Корректный разрыв VPN-соединения
+- **Приоритет**: P0 (Блокирующий)
+- **Предусловия**:
+  - Приложение находится в активном состоянии `.connected` с открытой сессией.
+- **Тестовые данные**: Не требуются.
+- **Шаги воспроизведения**:
+  1. Открыть приложение в подключенном состоянии.
+  2. Нажать центральную кнопку отключения.
+  3. Проследить процедуру сворачивания сетевого интерфейса.
+- **Ожидаемый результат**:
+  - Состояние мгновенно переходит в `disconnecting`, затем в `disconnected`.
+  - В объекте сессии фиксируется точное время завершения (`endTime`).
+  - Системный интерфейс туннеля корректно сворачивается, восстанавливается прямая маршрутизация.
+- **Кандидат на автоматизацию**: Да (`ViaTests/StateTransitionInvariantsTests.swift`).
+- **Логирование**: В `SanitizedLogger` фиксируется запись `"VPN session disconnected."`.
 
+---
+
+## FUN-VPN-003: Явный выбор узла против автоматического подбора
+- **Приоритет**: P1 (Критический)
+- **Предусловия**:
+  - В `ServerStore` сохранено несколько серверов с разным пингом и качеством связи.
+- **Тестовые данные**:
+  - Сервер A: задержка 25 мс (оценка здоровья: 25)
+  - Сервер B: задержка 120 мс (оценка здоровья: 120)
+- **Шаги воспроизведения**:
+  1. Вызвать подключение `connect(server: nil)` без указания конкретного узла.
+  2. Проверить, какой узел выбрал `ConnectionCoordinator`.
+- **Ожидаемый результат**:
+  - `ConnectionCoordinator` автоматически выбирает Сервер A с минимальным временем отклика.
+- **Кандидат на автоматизацию**: Да (Модульный тест с тестовым дублером ServerStore).

@@ -1,47 +1,46 @@
-# Defect Report Template
+# Шаблон Отчета о Дефекте (Bug Report Template)
 
-- **Defect ID**: `BUG-[AREA]-[NUMBER]` (e.g. `BUG-NET-004`)
-- **Title**: `[Short descriptive title summarizing the failure]`
-- **Severity**: `[P0 - Blocker | P1 - Critical | P2 - Major | P3 - Minor]`
-- **Priority**: `[Immediate | High | Normal | Low]`
-- **Suspected Area**: `[VPN State Machine | XrayBridge | Parser | NetworkExtension | UI]`
-- **Build / Commit**: `[Git commit SHA or Build Version]`
-- **Test Environment**:
-  - Device: `[e.g. iPhone 15 Pro | iOS Simulator iPhone 18 Pro]`
-  - OS Version: `[e.g. iOS 18.0 | macOS 15.0]`
-  - Network Type: `[Wi-Fi 6 | 5G Cellular | Dual-Stack]`
+- **ID Дефекта**: `BUG-[ОБЛАСТЬ]-[НОМЕР]` (напр. `BUG-NET-004`)
+- **Заголовок**: `[Краткое информативное описание возникшей проблемы]`
+- **Критичность (Severity)**: `[P0 - Блокирующий | P1 - Критический | P2 - Значительный | P3 - Незначительный]`
+- **Приоритет (Priority)**: `[Немедленный | Высокий | Обычный | Низкий]`
+- **Предполагаемая область**: `[Автомат состояний | XrayBridge | Парсер | NetworkExtension | SwiftUI]`
+- **Версия сборки / Коммит**: `[Git commit SHA или номер сборки]`
+- **Тестовое окружение**:
+  - Устройство: `[напр. iPhone 15 Pro | Симулятор iPhone 18 Pro]`
+  - Версия ОС: `[напр. iOS 18.0 | macOS 15.0]`
+  - Тип сети: `[Wi-Fi 6 | 5G Сотовая сеть | Dual-Stack IPv4/IPv6]`
 
 ---
 
-## 1. Description
-A clear and concise description of the defect.
+## 1. Описание
+Четкое и лаконичное описание сути выявленной ошибки.
 
-## 2. Preconditions
-- Server configured: `[Protocol type, e.g. VLESS Reality]`
-- Network state: `[Online / Offline / Flapping]`
+## 2. Предусловия
+- Настроенный сервер: `[Тип протокола, напр. VLESS Reality]`
+- Состояние сети: `[Подключено / Обрыв / Высокие потери]`
 
-## 3. Steps to Reproduce
-1. Step 1...
-2. Step 2...
-3. Step 3...
+## 3. Шаги для воспроизведения
+1. Шаг 1...
+2. Шаг 2...
+3. Шаг 3...
 
-## 4. Expected Result
-What should have happened according to specifications.
+## 4. Ожидаемый результат
+Что должно было произойти согласно архитектурным требованиям и спецификации.
 
-## 5. Actual Result
-What actually occurred (including exact error messages or crash codes).
+## 5. Фактический результат
+Что произошло на самом деле (с точными текстами ошибок или кодами системных сбоев).
 
-## 6. Reproducibility
-- [ ] 100% (Deterministic)
-- [ ] Intermittent (~50%)
-- [ ] Observed once
+## 6. Воспроизводимость
+- [ ] 100% (Стабильно воспроизводится)
+- [ ] Плавающий дефект (~50%)
+- [ ] Зафиксировано однократно
 
-## 7. Sanitized Logs & Diagnostics
+## 7. Обезличенные логи и диагностика
 ```
-[Paste sanitized logs here. Confirm NO passwords, private keys, or real IPs are present.]
+[Вставьте санитизированные логи сюда. Убедитесь в отсутствии паролей, ключей и реальных IP-адресов.]
 ```
 
-## 8. Regression Status
-- Is this a regression from a previous build? `[Yes / No / Unknown]`
-- If yes, last known good build: `[Commit SHA]`
-
+## 8. Статус регрессии
+- Является ли это регрессией предыдущих сборок? `[Да / Нет / Неизвестно]`
+- Если да, укажите последний рабочий коммит: `[Commit SHA]`

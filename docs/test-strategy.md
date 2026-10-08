@@ -1,101 +1,100 @@
-# Test Strategy
+# Стратегия Тестирования (Test Strategy)
 
-## 1. Executive Summary
+## 1. Общие положения
 
-This Quality Engineering Strategy establishes the verification standards for the **Via** VPN client on iOS 17+ and macOS. The system under test (SUT) combines a modern Swift 6 user interface with Apple's `NetworkExtension` framework and a sandboxed Go-based proxy runtime (`Xray-core v1.8.24`).
+Настоящая Стратегия Инженерии Качества определяет стандарты и методы верификации VPN- и proxy-клиента **Via** для платформ iOS 17+ и macOS. Тестируемая система (SUT) объединяет современный пользовательский интерфейс на Swift 6, системный фреймворк Apple `NetworkExtension` и встроенное Go-ядро маршрутизации (`Xray-core v1.8.24`).
 
-Because VPN software operates at the operating system boundary, standard application testing practices are insufficient. This strategy prioritizes data-plane verification, memory footprint compliance, resilient connection state transitions, and zero-leak privacy validation.
+Поскольку VPN-клиент функционирует на стыке с ядром операционной системы, стандартных подходов к тестированию мобильных приложений недостаточно. Данная стратегия ставит во главу угла проверку целостности плоскости передачи данных (Data-Plane), удержание строгого бюджета оперативной памяти, детерминированные переходы состояний и политику абсолютной конфиденциальности без утечек.
 
 ---
 
-## 2. Quality Objectives
+## 2. Цели в области качества
 
-| Objective | Description | Target Metric |
+| Цель | Описание | Целевой показатель |
 | :--- | :--- | :--- |
-| **Tunnel Correctness** | Accurate routing of IP packets through specified proxy outbounds. | 100% of tested protocol configurations establish valid outbounds. |
-| **Data Plane Privacy** | Complete prevention of DNS, IPv6, and WebRTC leakage outside the tunnel interface. | 0 unencrypted DNS queries or leaked IPv6 packets detected. |
-| **Connection Resilience** | Deterministic state recovery across network interface changes and dropouts. | Automatic recovery within exponential backoff window without app crash. |
-| **Memory Footprint** | Adherence to project memory budget in the packet extension. | Extension resident memory < 15 MB across all connection phases. |
-| **Concurrency Safety** | Elimination of race conditions and deadlocks in multi-threaded workflows. | Swift 6 strict concurrency compliance with zero data races. |
-| **Zero Telemetry** | Absolute absence of third-party tracking, analytics, or persistent plaintext logs. | 0 telemetry endpoints contacted; 100% sanitized in-memory logs. |
+| **Корректность туннелирования** | Точная маршрутизация IP-пакетов через выбранный удаленный узел. | 100% поддерживаемых протоколов успешно устанавливают сессию. |
+| **Приватность данных** | Полное исключение утечек DNS, IPv6 и WebRTC за пределы виртуального интерфейса. | 0 незашифрованных DNS-запросов; 0 утекших IPv6-пакетов. |
+| **Сетевая устойчивость** | Детерминированное восстановление соединения при смене сетевых интерфейсов. | Автоматический реконнект в рамках экспоненциального отката без падения приложения. |
+| **Бюджет памяти** | Соблюдение проектного лимита памяти в расширении туннеля. | Resident memory расширения < 15 МБ на всех этапах сессии. |
+| **Безопасность конкурентности** | Исключение состояний гонки и дедлоков в многопоточной среде. | Полное соответствие Swift 6 Strict Concurrency, отсутствие Data Races. |
+| **Нулевая телеметрия** | Полное отсутствие сторонних SDK аналитики, трекеров и сохранения открытых логов. | 0 внешних аналитических эндпоинтов; 100% санитизация логов в памяти. |
 
 ---
 
-## 3. Test Levels & Methodology
+## 3. Уровни тестирования и методология
 
 ```
-               [ UI Tests (XCUITest) ]
-              - End-to-end user flows
-              - Server selection & toggle
-              - Accessibility identifiers
+               [ UI-тесты (XCUITest) ]
+              - Сквозные сценарии пользователя
+              - Выбор сервера и переключение туннеля
+              - Семантические accessibility identifiers
                          ▲
-            [ Network Chaos & Device Lab ]
-           - Wi-Fi ↔ Cellular handoff
-           - High latency & packet loss
-           - Sleep / wake transitions
+            [ Лаборатория хаоса и физические устройства ]
+           - Переключение Wi-Fi ↔ Мобильная сеть
+           - Высокий пинг, джиттер и потеря пакетов (1-50%)
+           - Спящий режим, экран блокировки, Captive Portal
                          ▲
-         [ Integration Tests (Swift Testing) ]
-        - ConnectionCoordinator state transitions
-        - RuntimeSnapshotManager atomic persistence
-        - ServerStore Keychain fallback handling
+         [ Интеграционные тесты (Swift Testing) ]
+        - Переходы состояний ConnectionCoordinator
+        - Атомарность снапшотов RuntimeSnapshotManager
+        - Резервное сохранение Keychain Fallback
                          ▲
-           [ Unit Tests (Swift Testing) ]
-          - UniversalConfigurationParser logic
-          - XrayConfigCompiler stream builders
-          - Exponential backoff retry policy
+           [ Модульные тесты (Swift Testing) ]
+          - Логика универсального парсера UniversalConfigurationParser
+          - Компилятор конфигураций XrayConfigCompiler
+          - Экспоненциальный откат повторных попыток (RetryPolicy)
 ```
 
-### 3.1 Unit Testing (Swift Testing)
-- **Tooling**: Swift Testing (`@Test`, `#expect`, `#require`, `@Suite`).
-- **Scope**: Pure functional logic, parsers, compilers, retry algorithms, model serialization.
-- **Characteristics**: Highly isolated, deterministic, runs in under 1 second without network connectivity.
+### 3.1 Модульное тестирование (Unit Testing)
+- **Инструментарий**: Swift Testing (`@Test`, `#expect`, `#require`, `@Suite`).
+- **Область**: Чистая функциональная логика, разбор URI и JSON, компилятор конфигураций, алгоритм повторных попыток.
+- **Особенности**: Полная изоляция от сети и ОС, детерминированность, время выполнения менее 1 секунды.
 
-### 3.2 Integration Testing
-- **Scope**: Interaction between actors (`ConnectionCoordinator`, `ServerStore`, `SettingsStore`) and filesystem/IPC boundaries (`AppGroupStorage`, `KeychainManager`).
-- **Approach**: Executed against test doubles (mocks/stubs) to decouple tests from the Apple kernel `utun` interface.
+### 3.2 Интеграционное тестирование (Integration Testing)
+- **Область**: Взаимодействие между акторами (`ConnectionCoordinator`, `ServerStore`, `SettingsStore`) и механизмами хранения (`AppGroupStorage`, `KeychainManager`).
+- **Подход**: Применение протокольных тестовых дублеров (Test Doubles) для отделения логики от ядра Apple `utun`.
 
-### 3.3 UI Testing (XCUITest)
-- **Tooling**: Apple `XCTest` / `XCUITest`.
-- **Scope**: Critical user journeys: first launch, manual server addition, subscription update, toggle connection button, navigating settings.
-- **Convention**: Relies strictly on semantic `accessibilityIdentifier` properties rather than coordinates or localized text labels.
+### 3.3 Автоматизация интерфейса (UI Testing)
+- **Инструментарий**: Apple `XCTest` / `XCUITest`.
+- **Область**: Критические пути пользователя: первый запуск, добавление подписки, переключение сервера, тумблер соединения.
+- **Принцип**: Использование исключительно `accessibilityIdentifier` вместо текстовых меток или координат экрана.
 
-### 3.4 Network Resilience Testing
-- **Scope**: Packet loss, high latency, jitter, network interface switching (Wi-Fi ↔ LTE), captive portals, and DNS server timeouts.
-- **Execution**: Controlled via macOS `pfctl`, Apple Network Link Conditioner, and physical router testbeds.
+### 3.4 Тестирование сетевой устойчивости (Network Resilience Testing)
+- **Область**: Потери пакетов, искусственный пинг, джиттер, миграция интерфейсов (Wi-Fi ↔ LTE), блокировки и сбои DNS.
+- **Исполнение**: Управление через `pfctl` на macOS, Network Link Conditioner и аппаратные тестовые роутеры.
 
-### 3.5 Security & Privacy Testing
-- **Scope**:
-  - Memory and log inspection for leaked credentials, UUIDs, or passwords.
-  - Network traffic sniffing via Wireshark to confirm zero unencrypted DNS or IPv6 egress.
-  - Dependency tree verification for unauthorized telemetry SDKs.
+### 3.5 Тестирование безопасности и приватности (Security & Privacy Testing)
+- **Область**:
+  - Инспекция памяти и кольцевого буфера логов на отсутствие открытых паролей, UUID и приватных ключей Reality.
+  - Анализ трафика через Wireshark для подтверждения отсутствия утечек DNS или IPv6.
+  - Проверка графа зависимостей на отсутствие скрытых аналитических SDK.
 
-### 3.6 Performance & Longevity Testing
-- **Scope**: Extension memory consumption over 1, 8, and 24-hour sessions; rapid connect/disconnect stress cycles (100 iterations); CPU usage during active 100 Mbps traffic throughput.
+### 3.6 Нагрузочное тестирование и долговечность (Performance & Longevity Testing)
+- **Область**: Замеры потребления памяти туннелем в сессиях на 1, 8 и 24 часа; стресс-тесты быстрых переподключений (100 циклов); утилизация CPU при передаче трафика на скорости 100 Мбит/с.
 
 ---
 
-## 4. Test Environments & Constraints
+## 4. Среды тестирования и ограничения
 
-| Environment | Capabilities | Limitations |
+| Среда | Возможности | Ограничения |
 | :--- | :--- | :--- |
-| **CI Runner (macOS / Xcode)** | Fast build, unit tests, parser integration tests, static security scans. | Cannot mount real kernel `utun` VPN interfaces; cannot execute cellular handoffs. |
-| **iOS Simulator (macOS)** | Full UI execution, mocked tunnel connections via `ConnectionCoordinator`, fast iteration. | Cannot attach real `NEPacketTunnelProvider` network flow; shares host macOS network stack. |
-| **Physical iOS Device (Lab)** | Real `NEPacketTunnelProvider` lifecycle, true cellular/Wi-Fi switching, real memory constraints. | Requires Apple Developer Provisioning, manual test harness setup, non-deterministic cellular signal. |
-| **macOS Host** | Can run `XrayBridge` natively, execute network shaping with `pfctl`, monitor resident memory. | UI layout differs from iOS touch paradigms. |
+| **CI Runner (macOS / Xcode)** | Быстрая сборка, юнит-тесты, парсеры, статические проверки безопасности. | Невозможно поднять реальный системный VPN-интерфейс `utun`; нет сотовой связи. |
+| **iOS Симулятор (macOS)** | Полный запуск SwiftUI, симуляция туннеля через мок-координатор, быстрая отладка. | Не подключает системный поток `NEPacketTunnelFlow`; делит сетевой стек с macOS. |
+| **Физический iPhone (Device Lab)** | Полный жизненный цикл `NEPacketTunnelProvider`, реальное переключение Wi-Fi/LTE, честные замеры памяти. | Требует платного профиля Apple Developer, ручной стенд, плавающий уровень сигнала сотовой вышки. |
+| **macOS Хост** | Прямой запуск `XrayBridge`, управление шейпингом через `pfctl`, точный замер RSS памяти. | Отличается парадигма интерфейса (десктоп вместо тачскрина). |
 
 ---
 
-## 5. Entry & Exit Criteria
+## 5. Критерии входа и выхода (Entry / Exit Criteria)
 
-### 5.1 Test Entry Criteria
-- Code builds without compiler errors under Swift 6 strict concurrency (`-strict-concurrency=complete`).
-- SPM tests pass locally (`swift test`).
-- Test configuration fixtures contain valid, non-expired credentials on dedicated test infrastructure.
+### 5.1 Критерии начала тестирования (Entry Criteria)
+- Проект компилируется без ошибок в режиме Swift 6 Strict Concurrency (`-strict-concurrency=complete`).
+- Все модульные тесты пакета выполняются успешно (`swift test`).
+- Тестовые фикстуры содержат корректные, непросроченные учетные данные на тестовых серверах.
 
-### 5.2 Test Exit Criteria (Release Readiness)
-- 100% pass rate on the Core Smoke Suite.
-- 0 open P0 (Blocker) or P1 (Critical) defects.
-- Extension resident memory remains under 15 MB during 30-minute high-throughput test.
-- No plaintext credentials detected in diagnostic logs.
-- Signed validation run completed on physical iOS hardware.
-
+### 5.2 Критерии готовности к релизу (Exit Criteria)
+- 100% успешное прохождение Smoke-набора тестов.
+- 0 открытых дефектов уровня P0 (Блокирующий) и P1 (Критический).
+- Память расширения туннеля стабильно удерживается < 15 МБ при 30-минутной высокой нагрузке.
+- В диагностических логах не обнаружено незамаскированных учетных данных.
+- Подписанный протокол валидации на реальном устройстве с iOS 17+.

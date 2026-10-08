@@ -1,38 +1,36 @@
-# Performance & Memory Test Cases
+# Нагрузочные Тест-Кейсы и Контроль Памяти (Performance & Memory)
 
-## PERF-MEM-001: Packet Tunnel Extension Resident Memory Budget (< 15 MB)
-- **Priority**: P0 (Blocker)
-- **Preconditions**:
-  - Physical iOS device connected via USB with Xcode Instruments Profiler attached.
-  - Target build configured in Release mode with compiler optimizations enabled.
-- **Test Data**: Active VLESS Reality or Trojan gRPC server.
-- **Steps**:
-  1. Boot target device and launch Via application.
-  2. Connect to VPN server node.
-  3. Attach `Allocations` and `Activity Monitor` instruments specifically to the `com.via.vpn.PacketTunnel` extension PID.
-  4. Measure Resident Memory (RSS) across four distinct phases:
-     - Phase A: Idle immediately after boot (0 traffic).
-     - Phase B: Active continuous traffic (10 Mbps throughput for 15 minutes).
-     - Phase C: High burst traffic (50 Mbps throughput for 5 minutes).
-     - Phase D: Post-burst idle (5 minutes recovery).
-- **Expected Result**:
-  - Resident memory remains strictly below the **15.0 MB project envelope** across all four phases.
-  - No continuous unbounded memory slope (memory leak) observed.
-- **Automation Candidate**: Benchmark Script / Instruments Trace (`benchmarks/run_memory_benchmark.sh`).
+## PERF-MEM-001: Бюджет оперативной памяти расширения туннеля (< 15 МБ)
+- **Приоритет**: P0 (Блокирующий)
+- **Предусловия**:
+  - Физический iPhone подключен по кабелю к Mac с запущенным Xcode Instruments.
+  - Сборка скомпилирована в конфигурации Release с включенными оптимизациями Swift.
+- **Тестовые данные**: Рабочий сервер VLESS Reality или Trojan gRPC.
+- **Шаги воспроизведения**:
+  1. Запустить приложение на iPhone и подключиться к VPN.
+  2. Прикрепить инструменты `Allocations` и `Activity Monitor` строго к процессу расширения `com.via.vpn.PacketTunnel`.
+  3. Замерить Resident Memory (RSS) в четырех фазах работы:
+     - Фаза A: Режим простоя сразу после старта туннеля (нулевой трафик).
+     - Фаза B: Постоянная передача трафика (10 Мбит/с в течение 15 минут).
+     - Фаза C: Пиковая нагрузка (50 Мбит/с в течение 5 минут).
+     - Фаза D: Режим простоя после нагрузки (5 минут остывания).
+- **Ожидаемый результат**:
+  - Resident memory строго удерживается в пределах **проектного конверта 15.0 МБ** во всех фазах.
+  - На графике отсутствует постоянный восходящий тренд (утечка памяти исключена).
+- **Кандидат на автоматизацию**: Скрипт бенчмарка / Трассировка Instruments (`benchmarks/run_memory_benchmark.sh`).
 
 ---
 
-## PERF-STR-001: Rapid Connect / Disconnect Cycle Stress
-- **Priority**: P1 (Critical)
-- **Preconditions**:
-  - Application running on iOS Simulator or Device.
-- **Test Data**: Pre-configured mock or real server.
-- **Steps**:
-  1. Trigger 50 rapid connect and disconnect cycles sequentially with randomized delays (50ms – 300ms) between commands.
-  2. Monitor `ConnectionCoordinator` state machine transitions for deadlocks or unhandled exceptions.
-  3. Verify that all async Tasks terminate and no abandoned goroutines remain.
-- **Expected Result**:
-  - 100% of iterations complete without deadlock.
-  - Final state is consistently `.disconnected`.
-- **Automation Candidate**: Yes (`ViaTests/StateTransitionInvariantsTests.swift`).
-
+## PERF-STR-001: Стресс-тест быстрых циклов переключения туннеля
+- **Приоритет**: P1 (Критический)
+- **Предусловия**:
+  - Приложение запущено на симуляторе iOS или физическом устройстве.
+- **Тестовые данные**: Настроенный тестовый узел.
+- **Шаги воспроизведения**:
+  1. Выполнить 50 последовательных циклов подключения и отключения со случайными интервалами (50–300 мс) между командами.
+  2. Отследить переходы актора `ConnectionCoordinator` на отсутствие дедлоков и необработанных исключений.
+  3. Проверить, что все асинхронные задачи (Tasks) завершаются и нет зависших горутин Go.
+- **Ожидаемый результат**:
+  - 100% итераций завершаются корректно без зависания приложения.
+  - Итоговое состояние туннеля стабильно зафиксировано как `.disconnected`.
+- **Кандидат на автоматизацию**: Да (`ViaTests/StateTransitionInvariantsTests.swift`).
